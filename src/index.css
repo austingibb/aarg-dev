@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: linear-gradient(
+    135deg,
+    #0a0a1a 0%,
+    #0d1b2e 15%,
+    #0f2744 30%,
+    #071a30 45%,
+    #0a0e1f 60%,
+    #12063a 75%,
+    #0a0a1a 100%
+  );
+  background-size: 400% 400%;
+  animation: gradient-shift 14s ease infinite;
+}
+
+.card-float {
+  animation: float 7s ease-in-out infinite;
+}
