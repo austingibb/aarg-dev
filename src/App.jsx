@@ -27,6 +27,7 @@ const LINKS = [
   { label: 'esummary',    href: 'https://esummary.aarg.dev', external: true },
   { label: 'Cavewise',    href: 'https://austingibb.itch.io/cavewise', external: true },
   { label: 'GitHub',      href: 'https://github.com/austingibb', external: true },
+  { label: 'LinkedIn',    href: 'https://linkedin.com/in/austingibb', external: true },
   { label: 'Portfolio',   href: 'https://austingibb.com', external: true },
 ]
 
