@@ -1,3 +1,6 @@
+# Service
+scripts/nssm.exe
+
 # Logs
 logs
 *.log

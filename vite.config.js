@@ -7,4 +7,8 @@ export default defineConfig({
   server: {
     allowedHosts: ['aarg.dev'],
   },
+  preview: {
+    host: true,
+    allowedHosts: ['aarg.dev'],
+  },
 })
