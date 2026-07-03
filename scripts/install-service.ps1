@@ -6,6 +6,9 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 $serviceName = 'aarg-dev'
 $nssmExe     = Join-Path $PSScriptRoot 'nssm.exe'
 $logDir      = Join-Path $projectRoot 'logs'
+$nginxExe    = 'C:\nginx\nginx.exe'
+$nginxPrefix = 'C:/nginx'
+$confPath    = Join-Path $projectRoot 'nginx.conf'
 
 # ── Verify NSSM ──────────────────────────────────────────────────────────────
 if (-not (Test-Path $nssmExe)) {
@@ -19,19 +22,16 @@ if (-not (Test-Path $nssmExe)) {
     exit 1
 }
 
-# ── Verify Node ───────────────────────────────────────────────────────────────
-$nodeCmd = Get-Command node -ErrorAction SilentlyContinue
-if (-not $nodeCmd) {
-    Write-Host 'Node.js not found in PATH.' -ForegroundColor Red
+# ── Verify NGINX ──────────────────────────────────────────────────────────────
+if (-not (Test-Path $nginxExe)) {
+    Write-Host "nginx not found at $nginxExe" -ForegroundColor Red
+    Write-Host 'Install nginx for Windows to C:\nginx first (https://nginx.org/en/download.html).' -ForegroundColor Yellow
     exit 1
 }
-$nodePath = $nodeCmd.Source
 
-# ── Verify vite entry point ───────────────────────────────────────────────────
-$viteEntry = Join-Path $projectRoot 'node_modules\vite\bin\vite.js'
-if (-not (Test-Path $viteEntry)) {
-    Write-Host "vite not found at $viteEntry" -ForegroundColor Red
-    Write-Host "Run 'npm install' in the project root first." -ForegroundColor Yellow
+# ── Verify nginx.conf ─────────────────────────────────────────────────────────
+if (-not (Test-Path $confPath)) {
+    Write-Host "nginx.conf not found at $confPath" -ForegroundColor Red
     exit 1
 }
 
@@ -46,6 +46,14 @@ if ($exitCode -ne 0) {
     exit 1
 }
 
+# ── Validate nginx config ─────────────────────────────────────────────────────
+Write-Host 'Testing nginx config...' -ForegroundColor Cyan
+& $nginxExe -p $nginxPrefix -c $confPath -t
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'nginx config test failed. Aborting.' -ForegroundColor Red
+    exit 1
+}
+
 # ── Remove existing service ───────────────────────────────────────────────────
 $existing = Get-Service $serviceName -ErrorAction SilentlyContinue
 if ($existing) {
@@ -53,18 +61,23 @@ if ($existing) {
     & $nssmExe stop $serviceName
     Start-Sleep -Seconds 2
     & $nssmExe remove $serviceName confirm
+    Start-Sleep -Seconds 1
 }
 
 New-Item -ItemType Directory -Force $logDir | Out-Null
 
 # ── Install ───────────────────────────────────────────────────────────────────
+# `daemon off;` lives inside nginx.conf (NSSM mangles -g quoting), keeping nginx
+# in the foreground so the service wrapper can supervise it.
 Write-Host "Installing service '$serviceName'..." -ForegroundColor Cyan
 
-& $nssmExe install $serviceName $nodePath
-& $nssmExe set $serviceName AppParameters   "`"$viteEntry`" preview"
-& $nssmExe set $serviceName AppDirectory    $projectRoot
+$appParams = "-p $nginxPrefix -c `"$confPath`""
+
+& $nssmExe install $serviceName $nginxExe
+& $nssmExe set $serviceName AppParameters   $appParams
+& $nssmExe set $serviceName AppDirectory    'C:\nginx'
 & $nssmExe set $serviceName DisplayName     'aarg.dev'
-& $nssmExe set $serviceName Description     'aarg.dev static site (Vite preview)'
+& $nssmExe set $serviceName Description     'aarg.dev static site (nginx)'
 & $nssmExe set $serviceName Start           SERVICE_AUTO_START
 & $nssmExe set $serviceName AppRestartDelay 5000
 & $nssmExe set $serviceName AppStdout       (Join-Path $logDir 'service.log')
