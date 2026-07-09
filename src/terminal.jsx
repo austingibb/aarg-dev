@@ -101,14 +101,24 @@ export function PriceChart({ values, color = 'cyan', height = '2.75rem', floor =
   )
 }
 
-function MetricRow({ label, color, values, value }) {
+/** Faint caption naming a graph's time window (e.g. "10h", "3d"). */
+function Span({ children }) {
+  return (
+    <span style={{ color: 'var(--dim)', marginLeft: 'auto', fontSize: '0.62rem', opacity: 0.75 }}>
+      {children}
+    </span>
+  )
+}
+
+function MetricRow({ label, color, values, value, span }) {
   return (
     <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
       <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>{label}</span>
       <Spark values={values} color={color} width={16} />
+      {span && <Span>{span}</Span>}
       <span
         className="tabular-nums"
-        style={{ color: 'var(--fg)', marginLeft: 'auto', whiteSpace: 'nowrap' }}
+        style={{ color: 'var(--fg)', marginLeft: span ? 0 : 'auto', whiteSpace: 'nowrap' }}
       >
         {value}
       </span>
@@ -124,41 +134,30 @@ function MetricRow({ label, color, values, value }) {
  *   render   — the viewer's own framerate
  * ----------------------------------------------------------------- */
 export function Activity({ metrics }) {
-  const { caffeine, commits, eth, ethPrice, fps } = metrics
+  const { caffeine, commits, eth, ethPrice } = metrics
   return (
     <div className="flex flex-col gap-2.5">
       <MetricRow
-        label="caffeine" color="amber" values={caffeine.series}
-        value={`${Math.round(caffeine.mg)}mg`}
+        label="caffeine" color="amber" values={caffeine.series} span="10h"
+        value={caffeine.mg != null ? `${Math.round(caffeine.mg)}mg` : '—'}
       />
       <MetricRow
-        label="commits" color="" values={commits.days}
-        value={commits.total != null ? `${commits.total}/7d` : '···'}
+        label="commits" color="" values={commits.days} span="7d"
+        value={commits.total != null ? String(commits.total) : '···'}
       />
       <MetricRow
-        label="eth tps" color="cyan" values={eth.series}
+        label="eth tps" color="cyan" values={eth.series} span="~3m"
         value={eth.tps != null ? String(Math.round(eth.tps)) : '···'}
       />
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
           <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>eth $</span>
-          <span
-            className="tabular-nums"
-            style={{ color: 'var(--fg)', marginLeft: 'auto', whiteSpace: 'nowrap' }}
-          >
+          <Span>3d</Span>
+          <span className="tabular-nums" style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
             {ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
           </span>
         </div>
         <PriceChart values={ethPrice?.series} color="cyan" floor={ethPrice?.floor} />
-      </div>
-      <div className="flex items-center text-xs" style={{ gap: '0.9rem', color: 'var(--dim)' }}>
-        <span style={{ width: '5em', flexShrink: 0 }}>render</span>
-        <span
-          className="tabular-nums"
-          style={{ color: 'var(--green)', marginLeft: 'auto', whiteSpace: 'nowrap' }}
-        >
-          {fps != null ? `${fps} fps` : '—'}
-        </span>
       </div>
     </div>
   )

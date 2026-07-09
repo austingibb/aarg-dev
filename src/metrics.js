@@ -21,10 +21,10 @@ export const GH_USER = 'austingibb'
  *
  * The blood-caffeine estimate (9 h elimination half-life + a short
  * absorption ramp) is computed here, in the browser, so the number
- * decays smoothly in real time between fetches.
- * Leave STATUS_URL = '' to fall back to a believable local estimate.
+ * decays smoothly in real time between fetches. If the feed is
+ * unreachable the caffeine metric shows "—" rather than faking a value.
  * ------------------------------------------------------------------ */
-export const STATUS_URL = ''
+export const STATUS_URL = 'https://aarg-status.s3.us-west-2.amazonaws.com/caffeine.json'
 
 const HALF_LIFE_H = 9      // caffeine elimination half-life (hours)
 const ABSORB_H = 0.5       // ~30 min to fully absorb / peak
@@ -50,18 +50,6 @@ export function caffeineSeries(drinks, now, hours = 10, n = 16) {
     out.push(caffeineAt(drinks, now - (i / (n - 1)) * hours * 3.6e6))
   }
   return out
-}
-
-/** A plausible drink log for "today", used until the endpoint is live. */
-export function fallbackDrinks(now = Date.now()) {
-  const base = new Date(now)
-  const mk = (h, m, mg) => {
-    const x = new Date(base)
-    x.setHours(h, m, 0, 0)
-    return { t: x.getTime(), mg }
-  }
-  return [mk(7, 30, 95), mk(10, 0, 120), mk(13, 30, 80), mk(16, 0, 95)]
-    .filter((d) => d.t <= now)
 }
 
 export async function fetchStatus() {
@@ -232,9 +220,9 @@ export function useActive() {
 
 /** The full panel: caffeine, commits, eth tps, viewer fps + active flag. */
 export function useMetrics() {
-  const [drinks, setDrinks] = useState(() => fallbackDrinks())
+  const [drinks, setDrinks] = useState(null) // null = not loaded yet (never faked)
   const [active, setActive] = useState(null)
-  const [mg, setMg] = useState(0)
+  const [mg, setMg] = useState(null)
   const [caffSeries, setCaffSeries] = useState([])
   const [commitDays, setCommitDays] = useState(null)
   const [tps, setTps] = useState(null)
@@ -247,17 +235,18 @@ export function useMetrics() {
     let alive = true
     const load = async () => {
       const s = await fetchStatus()
-      if (!alive) return
-      if (s) { setDrinks(s.drinks); setActive(s.active) }
-      else { setDrinks(fallbackDrinks()); setActive(null) }
+      if (!alive || !s) return // on failure keep last-known; never fabricate
+      setDrinks(s.drinks)
+      setActive(s.active)
     }
     load()
     const id = setInterval(load, 120000)
     return () => { alive = false; clearInterval(id) }
   }, [])
 
-  // recompute the decaying caffeine estimate every second
+  // recompute the decaying caffeine estimate every second (once loaded)
   useEffect(() => {
+    if (!Array.isArray(drinks)) return
     const tick = () => {
       const now = Date.now()
       setMg(caffeineAt(drinks, now))

@@ -23,7 +23,7 @@ export default function App() {
 
   return (
     <Screen max="64rem">
-      <Window title="aarg.dev" tag="session · 01">
+      <Window title="aarg.dev" tag={metrics.fps != null ? `${metrics.fps} fps` : 'session'}>
         {/* header */}
         <div className="px-6 pt-7 pb-5">
           <Prompt cmd="whoami" />
