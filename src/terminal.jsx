@@ -71,6 +71,32 @@ export function Spark({ values, color = '', width = 14 }) {
   )
 }
 
+/* A taller bar chart with a true $0 baseline (no min/max rescaling), for
+ * when you want honest magnitude instead of an exaggerated sparkline. */
+export function PriceChart({ values, color = 'cyan', height = '2.75rem' }) {
+  const v = Array.isArray(values) ? values : []
+  const top = v.length ? Math.max(...v) * 1.02 : 1 // small headroom, baseline stays 0
+  if (v.length === 0) {
+    return <div style={{ height, opacity: 0.4, color: 'var(--dim)' }} className="text-xs">no data</div>
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height }}>
+      {v.map((x, i) => (
+        <div
+          key={i}
+          style={{
+            flex: 1,
+            height: `${Math.max(1, (x / top) * 100)}%`,
+            background: `var(--${color})`,
+            opacity: 0.55 + 0.45 * (i / (v.length - 1 || 1)), // brighten toward now
+            borderRadius: '1px 1px 0 0',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function MetricRow({ label, color, values, value }) {
   return (
     <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
@@ -109,10 +135,18 @@ export function Activity({ metrics }) {
         label="eth tps" color="cyan" values={eth.series}
         value={eth.tps != null ? String(Math.round(eth.tps)) : '···'}
       />
-      <MetricRow
-        label="eth $" color="cyan" values={ethPrice?.series}
-        value={ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
-      />
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
+          <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>eth $</span>
+          <span
+            className="tabular-nums"
+            style={{ color: 'var(--fg)', marginLeft: 'auto', whiteSpace: 'nowrap' }}
+          >
+            {ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
+          </span>
+        </div>
+        <PriceChart values={ethPrice?.series} color="cyan" />
+      </div>
       <MetricRow
         label="s&p" color="" values={sp500?.series}
         value={sp500 ? `$${Math.round(sp500.price).toLocaleString()}` : '···'}
