@@ -43,8 +43,9 @@ export function caffeineAt(drinks, tMs) {
   return total
 }
 
-/** Sample the caffeine curve over the last `hours`, ending at `now`. */
-export function caffeineSeries(drinks, now, hours = 10, n = 16) {
+/** Sample the caffeine curve over the last `hours`, ending at `now`
+ *  (default 14 points over 14h = one bar per hour). */
+export function caffeineSeries(drinks, now, hours = 14, n = 14) {
   const out = []
   for (let i = n - 1; i >= 0; i--) {
     out.push(caffeineAt(drinks, now - (i / (n - 1)) * hours * 3.6e6))

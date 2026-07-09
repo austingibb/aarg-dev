@@ -89,7 +89,7 @@ export default function App() {
 
           {/* live telemetry cell */}
           <aside
-            className="w-full sm:w-80 shrink-0 px-6 py-5 border-t sm:border-t-0"
+            className="w-full sm:w-[22rem] shrink-0 px-6 py-5 border-t sm:border-t-0"
             style={{ borderColor: 'var(--border)' }}
           >
             <Activity metrics={metrics} />

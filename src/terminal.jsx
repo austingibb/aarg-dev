@@ -101,27 +101,34 @@ export function PriceChart({ values, color = 'cyan', height = '2.75rem', floor =
   )
 }
 
-/** Faint caption naming a graph's time window (e.g. "10h", "3d"). */
-function Span({ children }) {
+/* Fixed column widths so the sparkline, time-span label, and value each
+ * sit in their own column and line up across every row, regardless of
+ * how wide the text is. */
+const LABEL_W = '5em'
+const SPARK_W = 14   // one cell per point for the 14-point (2-week / 14h) series
+const SPAN_W = '2.4em'
+const VALUE_W = '4.7em'
+
+/** The right-hand pair of fixed columns: time-span label, then value. */
+function Tail({ span, value }) {
   return (
-    <span style={{ color: 'var(--dim)', marginLeft: 'auto', fontSize: '0.62rem', opacity: 0.75 }}>
-      {children}
-    </span>
+    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexShrink: 0 }}>
+      <span style={{ width: SPAN_W, textAlign: 'right', color: 'var(--dim)', opacity: 0.7, fontSize: '0.62rem' }}>
+        {span}
+      </span>
+      <span className="tabular-nums" style={{ width: VALUE_W, textAlign: 'right', color: 'var(--fg)', whiteSpace: 'nowrap' }}>
+        {value}
+      </span>
+    </div>
   )
 }
 
 function MetricRow({ label, color, values, value, span }) {
   return (
-    <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
-      <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>{label}</span>
-      <Spark values={values} color={color} width={16} />
-      {span && <Span>{span}</Span>}
-      <span
-        className="tabular-nums"
-        style={{ color: 'var(--fg)', marginLeft: span ? 0 : 'auto', whiteSpace: 'nowrap' }}
-      >
-        {value}
-      </span>
+    <div className="flex items-center text-xs" style={{ gap: '0.8rem' }}>
+      <span style={{ color: 'var(--dim)', width: LABEL_W, flexShrink: 0 }}>{label}</span>
+      <Spark values={values} color={color} width={SPARK_W} />
+      <Tail span={span} value={value} />
     </div>
   )
 }
@@ -153,7 +160,7 @@ export function Activity({ metrics }) {
       <section className="flex flex-col gap-2.5">
         <SectionLabel title="system" note="// you treat me like a machine. here's your telemetry." />
         <MetricRow
-          label="caffeine" color="amber" values={caffeine.series} span="10h"
+          label="caffeine" color="amber" values={caffeine.series} span="14h"
           value={caffeine.mg != null ? `${Math.round(caffeine.mg)}mg` : '—'}
         />
         <MetricRow
@@ -169,12 +176,9 @@ export function Activity({ metrics }) {
           value={eth.tps != null ? String(Math.round(eth.tps)) : '···'}
         />
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
-            <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>eth $</span>
-            <Span>2w</Span>
-            <span className="tabular-nums" style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
-              {ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
-            </span>
+          <div className="flex items-center text-xs" style={{ gap: '0.8rem' }}>
+            <span style={{ color: 'var(--dim)', width: LABEL_W, flexShrink: 0 }}>eth $</span>
+            <Tail span="2w" value={ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'} />
           </div>
           <PriceChart values={ethPrice?.series} color="cyan" floor={ethPrice?.floor} />
         </div>
