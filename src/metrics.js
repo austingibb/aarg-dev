@@ -151,7 +151,20 @@ export async function fetchEthPrice() {
     const rows = await r.json() // [ time, low, high, open, close, volume ], newest first
     if (!Array.isArray(rows) || rows.length === 0) return null
     const series = rows.slice(0, 12).map((c) => c[4]).reverse() // oldest → newest close
-    return { price: rows[0][4], series }
+
+    // y-axis floor = 0.6 * yesterday's average close. Crops the dead
+    // bottom of the range without hugging the min. If today's price
+    // breaches it, the chart recalcs the floor down (see PriceChart).
+    const midnight = new Date(); midnight.setHours(0, 0, 0, 0)
+    const todayStart = midnight.getTime()
+    const yStart = todayStart - 864e5
+    const yCloses = rows.filter((c) => c[0] * 1000 >= yStart && c[0] * 1000 < todayStart).map((c) => c[4])
+    const yAvg = yCloses.length
+      ? yCloses.reduce((a, b) => a + b, 0) / yCloses.length
+      : series.reduce((a, b) => a + b, 0) / series.length
+    const floor = 0.6 * yAvg
+
+    return { price: rows[0][4], series, floor }
   } catch {
     return null
   }
