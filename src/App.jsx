@@ -22,7 +22,7 @@ export default function App() {
   const metrics = useMetrics()
 
   return (
-    <Screen>
+    <Screen max="64rem">
       <Window title="aarg.dev" tag="session · 01">
         {/* header */}
         <div className="px-6 pt-7 pb-5">
@@ -89,7 +89,7 @@ export default function App() {
 
           {/* live telemetry cell */}
           <aside
-            className="w-full sm:w-64 shrink-0 px-6 py-4 border-t sm:border-t-0"
+            className="w-full sm:w-80 shrink-0 px-6 py-5 border-t sm:border-t-0"
             style={{ borderColor: 'var(--border)' }}
           >
             <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--amber)' }}>

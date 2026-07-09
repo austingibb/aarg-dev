@@ -14,7 +14,7 @@ export default function Blog() {
   const go = (path) => (e) => { e.preventDefault(); navigate(path) }
 
   return (
-    <Screen align="top">
+    <Screen align="top" max="56rem">
       <Window title="aarg.dev / blog" tag={`${posts.length} entr${posts.length === 1 ? 'y' : 'ies'}`}>
         <div className="px-6 pt-7 pb-4">
           <Prompt cmd="cd ~/blog && ls -l" cursor />

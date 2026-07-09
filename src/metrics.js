@@ -140,6 +140,47 @@ export async function fetchEthBlock() {
   }
 }
 
+/* ------------------------------------------------------------------
+ * ETH PRICE — keyless, live. Coinbase 6-hour candles give both the
+ * current price and a real ~3-day sparkline (newest bar first).
+ * ------------------------------------------------------------------ */
+export async function fetchEthPrice() {
+  try {
+    const r = await fetch('https://api.exchange.coinbase.com/products/ETH-USD/candles?granularity=21600')
+    if (!r.ok) return null
+    const rows = await r.json() // [ time, low, high, open, close, volume ], newest first
+    if (!Array.isArray(rows) || rows.length === 0) return null
+    const series = rows.slice(0, 12).map((c) => c[4]).reverse() // oldest → newest close
+    return { price: rows[0][4], series }
+  } catch {
+    return null
+  }
+}
+
+/* ------------------------------------------------------------------
+ * S&P 500 — 6 data points = 12-hour averages over the last 3 days.
+ * No keyless, CORS-enabled source for index intraday exists (every
+ * provider needs an API key, and one shared key can't back a public
+ * site), so this reads a small cached blob your server publishes —
+ * same pattern as the caffeine feed. See scripts/publish-market.mjs.
+ * Expected shape:
+ *   { "sp500": [5601.2, 5588.4, ... 6 numbers, oldest → newest] }
+ * ------------------------------------------------------------------ */
+export const MARKET_URL = ''
+
+export async function fetchMarket() {
+  if (!MARKET_URL) return null
+  try {
+    const r = await fetch(MARKET_URL, { cache: 'no-store' })
+    if (!r.ok) return null
+    const j = await r.json()
+    if (!Array.isArray(j.sp500) || j.sp500.length === 0) return null
+    return { sp500: j.sp500 }
+  } catch {
+    return null
+  }
+}
+
 /* ==================================================================
  * HOOKS
  * ================================================================== */
@@ -171,6 +212,8 @@ export function useMetrics() {
   const [commitDays, setCommitDays] = useState(null)
   const [tps, setTps] = useState(null)
   const [tpsSeries, setTpsSeries] = useState([])
+  const [ethPrice, setEthPrice] = useState(null)
+  const [sp500, setSp500] = useState(null)
   const [fps, setFps] = useState(null)
 
   // status (drink log + active): now, then every 2 min
@@ -228,6 +271,24 @@ export function useMetrics() {
     return () => { alive = false; clearInterval(id) }
   }, [])
 
+  // eth price: now, then every 60 s
+  useEffect(() => {
+    let alive = true
+    const load = async () => { const p = await fetchEthPrice(); if (alive && p) setEthPrice(p) }
+    load()
+    const id = setInterval(load, 60000)
+    return () => { alive = false; clearInterval(id) }
+  }, [])
+
+  // s&p 500: now, then every 15 min (the blob updates slowly)
+  useEffect(() => {
+    let alive = true
+    const load = async () => { const m = await fetchMarket(); if (alive && m) setSp500(m.sp500) }
+    load()
+    const id = setInterval(load, 900000)
+    return () => { alive = false; clearInterval(id) }
+  }, [])
+
   // viewer's own render framerate
   useEffect(() => {
     if (prefersReduced()) return
@@ -249,6 +310,8 @@ export function useMetrics() {
     caffeine: { mg, series: caffSeries, active },
     commits: { days: commitDays, total: commitDays ? commitDays.reduce((a, b) => a + b, 0) : null },
     eth: { tps, series: tpsSeries },
+    ethPrice, // { price, series } | null
+    sp500,    // number[] | null
     fps,
     active,
   }

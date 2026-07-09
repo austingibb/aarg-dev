@@ -7,14 +7,15 @@ import { useState, useEffect } from 'react'
  * component files to export only components).
  * ------------------------------------------------------------------ */
 
-/** Full-screen phosphor backdrop that centers a single window. */
-export function Screen({ children, align = 'center' }) {
+/** Full-screen phosphor backdrop that centers a single window.
+ *  `max` caps the width on big screens; it stays fluid below that. */
+export function Screen({ children, align = 'center', max = '46rem' }) {
   return (
     <main
       className="min-h-svh flex justify-center px-4 py-10 sm:py-14"
       style={{ alignItems: align === 'top' ? 'flex-start' : 'center' }}
     >
-      <div className="w-full" style={{ maxWidth: '46rem' }}>
+      <div className="w-full" style={{ maxWidth: max }}>
         {children}
       </div>
     </main>
@@ -72,10 +73,13 @@ export function Spark({ values, color = '', width = 14 }) {
 
 function MetricRow({ label, color, values, value }) {
   return (
-    <div className="flex items-center gap-3 text-xs">
-      <span style={{ color: 'var(--dim)', width: '4.6em' }}>{label}</span>
-      <Spark values={values} color={color} />
-      <span className="tabular-nums" style={{ color: 'var(--fg)', marginLeft: 'auto' }}>
+    <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
+      <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>{label}</span>
+      <Spark values={values} color={color} width={16} />
+      <span
+        className="tabular-nums"
+        style={{ color: 'var(--fg)', marginLeft: 'auto', whiteSpace: 'nowrap' }}
+      >
         {value}
       </span>
     </div>
@@ -90,7 +94,7 @@ function MetricRow({ label, color, values, value }) {
  *   render   — the viewer's own framerate
  * ----------------------------------------------------------------- */
 export function Activity({ metrics }) {
-  const { caffeine, commits, eth, fps } = metrics
+  const { caffeine, commits, eth, ethPrice, sp500, fps } = metrics
   return (
     <div className="flex flex-col gap-2.5">
       <MetricRow
@@ -105,9 +109,20 @@ export function Activity({ metrics }) {
         label="eth tps" color="cyan" values={eth.series}
         value={eth.tps != null ? String(Math.round(eth.tps)) : '···'}
       />
-      <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--dim)' }}>
-        <span style={{ width: '4.6em' }}>render</span>
-        <span style={{ color: 'var(--green)' }}>
+      <MetricRow
+        label="eth $" color="cyan" values={ethPrice?.series}
+        value={ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
+      />
+      <MetricRow
+        label="s&p 500" color="" values={sp500}
+        value={sp500 ? Math.round(sp500[sp500.length - 1]).toLocaleString() : '···'}
+      />
+      <div className="flex items-center text-xs" style={{ gap: '0.9rem', color: 'var(--dim)' }}>
+        <span style={{ width: '5em', flexShrink: 0 }}>render</span>
+        <span
+          className="tabular-nums"
+          style={{ color: 'var(--green)', marginLeft: 'auto', whiteSpace: 'nowrap' }}
+        >
           {fps != null ? `${fps} fps` : '—'}
         </span>
       </div>
