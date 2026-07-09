@@ -134,23 +134,18 @@ export async function fetchEthBlock() {
  * ------------------------------------------------------------------ */
 export async function fetchEthPrice() {
   try {
-    const r = await fetch('https://api.exchange.coinbase.com/products/ETH-USD/candles?granularity=21600')
+    // daily candles; last 14 = two weeks
+    const r = await fetch('https://api.exchange.coinbase.com/products/ETH-USD/candles?granularity=86400')
     if (!r.ok) return null
     const rows = await r.json() // [ time, low, high, open, close, volume ], newest first
     if (!Array.isArray(rows) || rows.length === 0) return null
-    const series = rows.slice(0, 12).map((c) => c[4]).reverse() // oldest → newest close
+    const series = rows.slice(0, 14).map((c) => c[4]).reverse() // oldest → newest close
 
-    // y-axis floor = 0.6 * yesterday's average close. Crops the dead
-    // bottom of the range without hugging the min. If today's price
-    // breaches it, the chart recalcs the floor down (see PriceChart).
-    const midnight = new Date(); midnight.setHours(0, 0, 0, 0)
-    const todayStart = midnight.getTime()
-    const yStart = todayStart - 864e5
-    const yCloses = rows.filter((c) => c[0] * 1000 >= yStart && c[0] * 1000 < todayStart).map((c) => c[4])
-    const yAvg = yCloses.length
-      ? yCloses.reduce((a, b) => a + b, 0) / yCloses.length
-      : series.reduce((a, b) => a + b, 0) / series.length
-    const floor = 0.6 * yAvg
+    // y-axis floor = 0.6 * yesterday's close (rows[1]; rows[0] is today,
+    // still forming). Crops the dead bottom of the range without hugging
+    // the min; if a bar dips below it the chart recalcs down (PriceChart).
+    const yClose = rows.length > 1 ? rows[1][4] : series[0]
+    const floor = 0.6 * yClose
 
     return { price: rows[0][4], series, floor }
   } catch {

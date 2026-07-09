@@ -171,7 +171,7 @@ export function Activity({ metrics }) {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
             <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>eth $</span>
-            <Span>3d</Span>
+            <Span>2w</Span>
             <span className="tabular-nums" style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
               {ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
             </span>
