@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { posts, formatDate } from './posts/index.js'
-import { Screen, Window, Prompt, Clock } from './terminal.jsx'
+import { Screen, Window, Prompt, Clock, StatusDot } from './terminal.jsx'
 import { useRovingMenu } from './useRovingMenu.js'
+import { useActive } from './metrics.js'
 
 // row 0 is "back home", then one row per post
 export default function Blog() {
   const navigate = useNavigate()
+  const active = useActive()
   const targets = ['/', ...posts.map((p) => `/blog/${p.slug}`)]
   const { rowProps } = useRovingMenu(targets.length)
 
@@ -62,7 +64,7 @@ export default function Blog() {
         <hr className="tui-sep" />
 
         <div className="px-6 py-3 tui-status">
-          <span><span className="dot" /> &nbsp;online</span>
+          <StatusDot active={active} />
           <span><kbd>↑</kbd>/<kbd>↓</kbd> move</span>
           <span><kbd>⏎</kbd> open</span>
           <span style={{ marginLeft: 'auto' }}><Clock /></span>

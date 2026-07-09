@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 /* ------------------------------------------------------------------ *
  * Shared TUI building blocks for aarg.dev
@@ -46,80 +46,82 @@ export function Prompt({ cmd, cursor = false, path = '~' }) {
   )
 }
 
-/* ------------------------- activity panel ------------------------- *
- * A single "cell" that animates on its own: seeded random-walk
- * sparklines + a live uptime clock. Freezes under reduced-motion.
+/* --------------------------- sparkline ---------------------------- *
+ * Render a numeric series as unicode blocks. Auto-normalizes to its
+ * own min/max so whatever the data's range, the shape reads clearly.
  * ----------------------------------------------------------------- */
 const BLOCKS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
 
-function useSparkline(width, seed) {
-  const [bars, setBars] = useState(() =>
-    Array.from({ length: width }, (_, i) => (Math.sin(i * seed) + 1) * 3.5),
+export function Spark({ values, color = '', width = 14 }) {
+  if (!values || values.length === 0) {
+    return <span className={`spark ${color}`} style={{ opacity: 0.4 }}>{'·'.repeat(width)}</span>
+  }
+  const v = values.slice(-width)
+  const min = Math.min(...v)
+  const max = Math.max(...v)
+  const span = max - min || 1
+  const glyphs = v.map((x) => BLOCKS[Math.round(((x - min) / span) * 7)]).join('')
+  const pad = width - v.length
+  return (
+    <span className={`spark ${color}`}>
+      {pad > 0 && <span style={{ opacity: 0.4 }}>{'·'.repeat(pad)}</span>}
+      {glyphs}
+    </span>
   )
-  useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduce) return
-    const id = setInterval(() => {
-      setBars((prev) => {
-        const next = prev.slice(1)
-        const last = prev[prev.length - 1]
-        let v = last + (Math.random() - 0.5) * 3
-        v = Math.max(0, Math.min(7, v))
-        next.push(v)
-        return next
-      })
-    }, 620)
-    return () => clearInterval(id)
-  }, [seed])
-  const line = bars.map((v) => BLOCKS[Math.round(v)]).join('')
-  const latest = bars[bars.length - 1] / 7 // 0..1
-  return { line, latest }
 }
 
-function SparkRow({ label, color, width, seed, format }) {
-  const { line, latest } = useSparkline(width, seed)
+function MetricRow({ label, color, values, value }) {
   return (
     <div className="flex items-center gap-3 text-xs">
-      <span style={{ color: 'var(--dim)', width: '4.5em' }}>{label}</span>
-      <span className={`spark ${color}`}>{line}</span>
-      <span
-        style={{ color: 'var(--dim)', marginLeft: 'auto' }}
-        className="tabular-nums"
-      >
-        {format(latest)}
+      <span style={{ color: 'var(--dim)', width: '4.6em' }}>{label}</span>
+      <Spark values={values} color={color} />
+      <span className="tabular-nums" style={{ color: 'var(--fg)', marginLeft: 'auto' }}>
+        {value}
       </span>
     </div>
   )
 }
 
-export function Activity() {
-  const start = useRef(null)
-  const [uptime, setUptime] = useState('00:00:00')
-  useEffect(() => {
-    start.current = Date.now()
-    const id = setInterval(() => {
-      const s = Math.floor((Date.now() - start.current) / 1000)
-      const hh = String(Math.floor(s / 3600)).padStart(2, '0')
-      const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0')
-      const ss = String(s % 60).padStart(2, '0')
-      setUptime(`${hh}:${mm}:${ss}`)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [])
-
+/* ------------------------- activity panel ------------------------- *
+ * Real telemetry, each metric confined to its own cell:
+ *   caffeine — blood estimate (9 h half-life, computed live)
+ *   commits  — your GitHub contributions, last 7 days
+ *   eth tps  — live Ethereum transactions/sec
+ *   render   — the viewer's own framerate
+ * ----------------------------------------------------------------- */
+export function Activity({ metrics }) {
+  const { caffeine, commits, eth, fps } = metrics
   return (
     <div className="flex flex-col gap-2.5">
-      <SparkRow label="signal"  color=""      width={20} seed={0.7}
-        format={(v) => `${String(Math.round(v * 100)).padStart(3, ' ')}%`} />
-      <SparkRow label="deploys" color="amber" width={20} seed={1.3}
-        format={(v) => String(Math.round(v * 9)).padStart(3, ' ')} />
-      <SparkRow label="coffee"  color="cyan"  width={20} seed={2.1}
-        format={(v) => `${String(Math.round(80 + v * 240))}mg`} />
+      <MetricRow
+        label="caffeine" color="amber" values={caffeine.series}
+        value={`${Math.round(caffeine.mg)}mg`}
+      />
+      <MetricRow
+        label="commits" color="" values={commits.days}
+        value={commits.total != null ? `${commits.total}/7d` : '···'}
+      />
+      <MetricRow
+        label="eth tps" color="cyan" values={eth.series}
+        value={eth.tps != null ? String(Math.round(eth.tps)) : '···'}
+      />
       <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--dim)' }}>
-        <span style={{ width: '4.5em' }}>session</span>
-        <span style={{ color: 'var(--green)' }}>{uptime}</span>
+        <span style={{ width: '4.6em' }}>render</span>
+        <span style={{ color: 'var(--green)' }}>
+          {fps != null ? `${fps} fps` : '—'}
+        </span>
       </div>
     </div>
+  )
+}
+
+/** Status-bar presence dot. active: true=working, false=away, null=unknown. */
+export function StatusDot({ active }) {
+  const label = active === true ? 'active' : active === false ? 'away' : 'online'
+  return (
+    <span>
+      <span className={`dot ${active === false ? 'idle' : ''}`} /> &nbsp;{label}
+    </span>
   )
 }
 

@@ -205,6 +205,11 @@ body::before {
   box-shadow: 0 0 8px var(--green);
   animation: pulse 2.4s ease-in-out infinite;
 }
+.dot.idle {
+  background: var(--dim);
+  box-shadow: none;
+  animation: none;
+}
 @keyframes pulse { 50% { opacity: 0.4; } }
 
 /* ---- boot reveal ----------------------------------------- */

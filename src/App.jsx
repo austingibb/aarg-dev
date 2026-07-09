@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { Screen, Window, Prompt, Activity, Clock } from './terminal.jsx'
+import { Screen, Window, Prompt, Activity, Clock, StatusDot } from './terminal.jsx'
 import { useRovingMenu } from './useRovingMenu.js'
+import { useMetrics } from './metrics.js'
 
 const LINKS = [
   { label: 'blog',      hint: 'writing & notes',        to: '/blog' },
@@ -18,6 +19,7 @@ function ArrowGlyph() {
 export default function App() {
   const navigate = useNavigate()
   const { rowProps } = useRovingMenu(LINKS.length)
+  const metrics = useMetrics()
 
   return (
     <Screen>
@@ -85,15 +87,15 @@ export default function App() {
             })}
           </nav>
 
-          {/* animated cell */}
+          {/* live telemetry cell */}
           <aside
-            className="w-full sm:w-56 shrink-0 px-6 py-4 border-t sm:border-t-0"
+            className="w-full sm:w-64 shrink-0 px-6 py-4 border-t sm:border-t-0"
             style={{ borderColor: 'var(--border)' }}
           >
             <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--amber)' }}>
               system
             </p>
-            <Activity />
+            <Activity metrics={metrics} />
           </aside>
         </div>
 
@@ -101,7 +103,7 @@ export default function App() {
 
         {/* status bar */}
         <div className="px-6 py-3 tui-status">
-          <span><span className="dot" /> &nbsp;online</span>
+          <StatusDot active={metrics.active} />
           <span><kbd>↑</kbd>/<kbd>↓</kbd> move</span>
           <span><kbd>⏎</kbd> open</span>
           <span className="hidden sm:inline"><kbd>j</kbd>/<kbd>k</kbd> vim</span>
