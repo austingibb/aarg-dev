@@ -1,74 +1,73 @@
-import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { posts, formatDate } from './posts/index.js'
+import { Screen, Window, Prompt, Clock } from './terminal.jsx'
+import { useRovingMenu } from './useRovingMenu.js'
 
+// row 0 is "back home", then one row per post
 export default function Blog() {
-  useEffect(() => {
-    document.body.classList.add('blog-reading')
-    return () => document.body.classList.remove('blog-reading')
-  }, [])
+  const navigate = useNavigate()
+  const targets = ['/', ...posts.map((p) => `/blog/${p.slug}`)]
+  const { rowProps } = useRovingMenu(targets.length)
+
+  const go = (path) => (e) => { e.preventDefault(); navigate(path) }
 
   return (
-    <main className="min-h-svh flex justify-center px-4 py-12">
-      <div className="w-full max-w-3xl">
-        <Link
-          to="/"
-          className="
-            inline-block mb-8 text-sm text-white/40 hover:text-white/70
-            transition-colors duration-200
-          "
-        >
-          ← Home
-        </Link>
-
-        <div className="mb-10">
-          <h1 className="text-3xl font-semibold tracking-tight text-white/90 mb-1">Blog</h1>
-          <p className="text-xs font-mono text-white/30 tracking-widest uppercase">
-            aarg.dev / blog
-          </p>
+    <Screen align="top">
+      <Window title="aarg.dev / blog" tag={`${posts.length} entr${posts.length === 1 ? 'y' : 'ies'}`}>
+        <div className="px-6 pt-7 pb-4">
+          <Prompt cmd="cd ~/blog && ls -l" cursor />
         </div>
 
-        <ul className="flex flex-col gap-4">
-          {posts.map((post) => (
-            <li key={post.slug}>
-              <Link
-                to={`/blog/${post.slug}`}
-                className="
-                  block rounded-2xl border border-white/10 p-7
-                  bg-white/5 backdrop-blur-xl
-                  shadow-[0_4px_24px_rgba(0,0,0,0.4)]
-                  hover:border-white/20 hover:bg-white/8
-                  transition-all duration-200 group
-                "
-              >
-                <h2 className="text-lg font-semibold text-white/85 group-hover:text-white transition-colors duration-200 mb-2">
+        <hr className="tui-sep" />
+
+        <div className="py-3">
+          {/* back home */}
+          <a {...rowProps(0)} href="/" onClick={go('/')}>
+            <span className="caret" aria-hidden="true">›</span>
+            <span className="idx" aria-hidden="true">..</span>
+            <span style={{ color: 'inherit' }}>../</span>
+            <span className="text-xs" style={{ color: 'var(--dim)' }}>&nbsp;— home</span>
+            <span className="arrow" aria-hidden="true">↵</span>
+          </a>
+
+          {posts.map((post, i) => {
+            const rp = rowProps(i + 1)
+            return (
+            <a
+              {...rp}
+              key={post.slug}
+              href={`/blog/${post.slug}`}
+              onClick={go(`/blog/${post.slug}`)}
+              className={`${rp.className} !items-start !py-3`}
+            >
+              <span className="caret mt-0.5" aria-hidden="true">›</span>
+              <span className="idx mt-0.5">{String(i + 1).padStart(2, '0')}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-medium" style={{ color: 'var(--fg-strong)' }}>
                   {post.title}
-                </h2>
+                </span>
+                <span className="block text-xs mt-0.5" style={{ color: 'var(--dim)' }}>
+                  {formatDate(post.date)} · {post.readingTime} · {post.tags.join(', ')}
+                </span>
+                <span className="block text-xs mt-1.5" style={{ color: 'var(--fg)' }}>
+                  {post.excerpt}
+                </span>
+              </span>
+              <span className="arrow mt-0.5" aria-hidden="true">↵</span>
+            </a>
+            )
+          })}
+        </div>
 
-                <p className="text-xs text-white/35 mb-3 font-mono">
-                  {formatDate(post.date)}&nbsp;&nbsp;·&nbsp;&nbsp;{post.readingTime}
-                </p>
+        <hr className="tui-sep" />
 
-                <p className="text-sm text-white/55 leading-relaxed mb-4">{post.excerpt}</p>
-
-                <div className="flex flex-wrap gap-2">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="
-                        px-3 py-0.5 rounded-full text-xs font-medium
-                        border border-white/10 text-white/45 bg-white/5
-                      "
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </main>
+        <div className="px-6 py-3 tui-status">
+          <span><span className="dot" /> &nbsp;online</span>
+          <span><kbd>↑</kbd>/<kbd>↓</kbd> move</span>
+          <span><kbd>⏎</kbd> open</span>
+          <span style={{ marginLeft: 'auto' }}><Clock /></span>
+        </div>
+      </Window>
+    </Screen>
   )
 }

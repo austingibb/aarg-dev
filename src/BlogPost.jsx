@@ -1,107 +1,90 @@
-import { useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getPost, formatDate } from './posts/index.js'
+import { Screen, Window, Prompt, Clock } from './terminal.jsx'
 
 export default function BlogPost() {
   const { slug } = useParams()
+  const navigate = useNavigate()
   const post = getPost(slug)
-
-  useEffect(() => {
-    document.body.classList.add('blog-reading')
-    return () => document.body.classList.remove('blog-reading')
-  }, [])
 
   if (!post) {
     return (
-      <main className="min-h-svh flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-3xl text-center">
-          <h1 className="text-2xl font-semibold text-white/70 mb-4">Post not found</h1>
-          <Link
-            to="/blog"
-            className="
-              px-5 py-2 rounded-full text-sm font-medium
-              border border-white/15 text-white/70
-              bg-white/5 hover:bg-white/10 hover:text-white
-              transition-all duration-200
-            "
-          >
-            ← Back to Blog
-          </Link>
-        </div>
-      </main>
+      <Screen>
+        <Window title="aarg.dev / blog / 404">
+          <div className="px-6 py-10">
+            <Prompt cmd={`cat ${slug}.md`} />
+            <p className="mt-3 text-sm" style={{ color: 'var(--red)' }}>
+              error: no such entry — post not found.
+            </p>
+            <Link
+              to="/blog"
+              className="tui-row is-sel mt-6 inline-flex"
+              style={{ maxWidth: 'max-content' }}
+            >
+              <span className="caret">›</span>
+              <span>back to blog</span>
+            </Link>
+          </div>
+        </Window>
+      </Screen>
     )
   }
 
   const { title, date, author, readingTime, tags, toc, Content } = post
 
   return (
-    <main className="min-h-svh flex justify-center px-4 py-12">
-      <div className="w-full max-w-3xl">
-        {/* Breadcrumb nav */}
-        <nav className="flex items-center gap-2 text-xs font-mono text-white/30 mb-8">
-          <Link to="/" className="hover:text-white/60 transition-colors">aarg.dev</Link>
-          <span>/</span>
-          <Link to="/blog" className="hover:text-white/60 transition-colors">blog</Link>
-          <span>/</span>
-          <span className="text-white/20 truncate">{slug}</span>
-        </nav>
+    <Screen align="top">
+      <Window title="aarg.dev / blog" tag={readingTime}>
+        {/* breadcrumb prompt */}
+        <div className="px-6 pt-7 pb-4">
+          <Prompt path="~/blog" cmd={`cat ${slug}.md`} cursor />
+        </div>
 
-        <article
-          className="
-            rounded-2xl border border-white/10 px-8 py-10
-            bg-white/5 backdrop-blur-xl
-            shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)]
-          "
-        >
-          {/* Post header */}
+        <hr className="tui-sep" />
+
+        <article className="px-6 sm:px-8 py-8">
           <header className="mb-8">
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white/90 leading-snug mb-5">
+            <h1
+              className="text-xl sm:text-2xl font-semibold leading-snug mb-3"
+              style={{ color: 'var(--fg-strong)' }}
+            >
               {title}
             </h1>
-
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/40 font-mono mb-5">
-              <span>{author}</span>
-              <span className="text-white/20">·</span>
-              <time dateTime={date}>{formatDate(date)}</time>
-              <span className="text-white/20">·</span>
-              <span>{readingTime}</span>
+            <div className="text-xs mb-4" style={{ color: 'var(--dim)' }}>
+              {author} · <time dateTime={date}>{formatDate(date)}</time> · {readingTime}
             </div>
-
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="
-                    px-3 py-0.5 rounded-full text-xs font-medium
-                    border border-white/10 text-white/45 bg-white/5
-                  "
+                  className="text-xs px-2 py-0.5 border"
+                  style={{ color: 'var(--amber)', borderColor: 'var(--border)' }}
                 >
-                  {tag}
+                  #{tag.toLowerCase().replace(/\s+/g, '-')}
                 </span>
               ))}
             </div>
           </header>
 
-          {/* Table of contents */}
           {toc && toc.length > 0 && (
             <nav
               aria-label="Table of contents"
-              className="
-                rounded-xl border border-white/10 bg-white/3 px-6 py-5 mb-10
-              "
+              className="mb-9 border p-5"
+              style={{ borderColor: 'var(--border)' }}
             >
-              <p className="text-xs font-mono text-white/30 uppercase tracking-widest mb-3">
-                Contents
+              <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--amber)' }}>
+                contents
               </p>
               <ol className="flex flex-col gap-1.5">
                 {toc.map((item, i) => (
-                  <li key={item.id} className="flex items-baseline gap-3">
-                    <span className="text-xs font-mono text-white/20 tabular-nums w-5 shrink-0">
+                  <li key={item.id} className="flex items-baseline gap-3 text-sm">
+                    <span className="tabular-nums text-xs" style={{ color: 'var(--dim)', width: '1.6em' }}>
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <a
                       href={`#${item.id}`}
-                      className="text-sm text-white/50 hover:text-white/80 transition-colors duration-150"
+                      style={{ color: 'var(--fg)' }}
+                      className="hover:underline underline-offset-4"
                     >
                       {item.label}
                     </a>
@@ -111,14 +94,26 @@ export default function BlogPost() {
             </nav>
           )}
 
-          <hr className="border-white/10 mb-8" />
+          <hr className="tui-sep mb-8" />
 
-          {/* Post body */}
           <div className="prose">
             <Content />
           </div>
         </article>
-      </div>
-    </main>
+
+        <hr className="tui-sep" />
+
+        <div className="px-6 py-3 tui-status">
+          <a
+            href="/blog"
+            onClick={(e) => { e.preventDefault(); navigate('/blog') }}
+            style={{ color: 'var(--amber)' }}
+          >
+            ‹ back to blog
+          </a>
+          <span style={{ marginLeft: 'auto' }}><Clock /></span>
+        </div>
+      </Window>
+    </Screen>
   )
 }

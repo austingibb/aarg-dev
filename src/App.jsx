@@ -1,106 +1,113 @@
-import { Link } from 'react-router-dom'
-
-function ExternalIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="inline-block ml-1 opacity-50"
-    >
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-      <polyline points="15 3 21 3 21 9" />
-      <line x1="10" y1="14" x2="21" y2="3" />
-    </svg>
-  )
-}
+import { useNavigate } from 'react-router-dom'
+import { Screen, Window, Prompt, Activity, Clock } from './terminal.jsx'
+import { useRovingMenu } from './useRovingMenu.js'
 
 const LINKS = [
-  { label: 'Blog',        to: '/blog' },
-  { label: 'Cavewise',    href: 'https://austingibb.itch.io/cavewise', external: true },
-  { label: 'Paste Book',  href: 'https://paste-book.com', external: true },
-  { label: 'GitHub',      href: 'https://github.com/austingibb', external: true },
-  { label: 'LinkedIn',    href: 'https://linkedin.com/in/austingibb', external: true },
-  { label: 'Portfolio',   href: 'https://austingibb.com', external: true },
+  { label: 'blog',      hint: 'writing & notes',        to: '/blog' },
+  { label: 'cavewise',  hint: 'a game on itch.io',      href: 'https://austingibb.itch.io/cavewise' },
+  { label: 'paste-book', hint: 'youtube → ebook',       href: 'https://paste-book.com' },
+  { label: 'github',    hint: 'source & experiments',   href: 'https://github.com/austingibb' },
+  { label: 'linkedin',  hint: 'the professional mask',  href: 'https://linkedin.com/in/austingibb' },
+  { label: 'portfolio', hint: 'austingibb.com',         href: 'https://austingibb.com' },
 ]
 
+function ArrowGlyph() {
+  return <span className="arrow" aria-hidden="true">↵</span>
+}
+
 export default function App() {
+  const navigate = useNavigate()
+  const { rowProps } = useRovingMenu(LINKS.length)
+
   return (
-    <main className="min-h-svh flex items-center justify-center px-4 py-12">
-      <div className="card-float w-full max-w-lg">
-        <div
-          className="
-            rounded-2xl border border-white/10 p-10
-            bg-white/5 backdrop-blur-xl
-            shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.12)]
-          "
-        >
-          {/* Name */}
-          <h1 className="text-3xl font-semibold tracking-tight text-white/90 mb-1">
-            Austin Gibbons
-          </h1>
-          <p className="text-xs font-mono text-white/30 tracking-widest uppercase mb-8">
-            aarg.dev
-          </p>
-
-          {/* Description */}
-          <p className="text-white/60 text-sm leading-relaxed mb-8">
-            My messy website for my own tech services.
-          </p>
-
-          {/* Flavor line */}
-          <p className="text-white/30 text-xs italic mb-10">
-            Everyone keeps wondering what Austin would do if he stopped coding.
-            I guess we'll never know.
-          </p>
-
-          {/* Links */}
-          <nav aria-label="Site sections">
-            <ul className="flex flex-wrap gap-3 justify-center">
-              {LINKS.map(({ label, to, href, external }) => (
-                <li key={label}>
-                  {to ? (
-                    <Link
-                      to={to}
-                      className="
-                        px-5 py-2 rounded-full text-sm font-medium
-                        border border-white/15 text-white/70
-                        bg-white/5 hover:bg-white/10 hover:text-white
-                        transition-all duration-200
-                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400
-                      "
-                    >
-                      {label}
-                    </Link>
-                  ) : (
-                    <a
-                      href={href}
-                      {...(external && { target: '_blank', rel: 'noopener noreferrer' })}
-                      className="
-                        inline-flex items-center
-                        px-5 py-2 rounded-full text-sm font-medium
-                        border border-white/15 text-white/70
-                        bg-white/5 hover:bg-white/10 hover:text-white
-                        transition-all duration-200
-                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400
-                      "
-                    >
-                      {label}{external && <ExternalIcon />}
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </nav>
+    <Screen>
+      <Window title="aarg.dev" tag="session · 01">
+        {/* header */}
+        <div className="px-6 pt-7 pb-5">
+          <Prompt cmd="whoami" />
+          <div className="mt-2 pl-0">
+            <h1 className="text-xl sm:text-2xl font-semibold" style={{ color: 'var(--fg-strong)' }}>
+              Austin Gibbons
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--dim)' }}>
+              software engineer · builds odd useful things
+            </p>
+          </div>
+          <div className="mt-4">
+            <Prompt cmd="cat about.txt" />
+            <p className="mt-1.5 text-sm max-w-prose" style={{ color: 'var(--fg)' }}>
+              My messy corner of the internet for my own tech services. Everyone keeps
+              wondering what Austin would do if he stopped coding — I guess we&apos;ll never know.
+            </p>
+          </div>
+          <div className="mt-4">
+            <Prompt cmd="ls ~/links" cursor />
+          </div>
         </div>
-      </div>
-    </main>
+
+        <hr className="tui-sep" />
+
+        {/* body: nav + activity, side by side on wider screens */}
+        <div className="flex flex-col sm:flex-row">
+          {/* nav menu */}
+          <nav
+            aria-label="Site navigation"
+            className="flex-1 py-3 sm:border-r"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            {LINKS.map((item, i) => {
+              const common = rowProps(i)
+              const inner = (
+                <>
+                  <span className="caret" aria-hidden="true">›</span>
+                  <span className="idx">{String(i + 1).padStart(2, '0')}</span>
+                  <span style={{ color: 'inherit' }}>{item.label}</span>
+                  <span className="hidden sm:inline text-xs" style={{ color: 'var(--dim)' }}>
+                    &nbsp;— {item.hint}
+                  </span>
+                  <ArrowGlyph />
+                </>
+              )
+              return item.to ? (
+                <a
+                  key={item.label}
+                  {...common}
+                  href={item.to}
+                  onClick={(e) => { e.preventDefault(); navigate(item.to) }}
+                >
+                  {inner}
+                </a>
+              ) : (
+                <a key={item.label} {...common} href={item.href} target="_blank" rel="noopener noreferrer">
+                  {inner}
+                </a>
+              )
+            })}
+          </nav>
+
+          {/* animated cell */}
+          <aside
+            className="w-full sm:w-56 shrink-0 px-6 py-4 border-t sm:border-t-0"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--amber)' }}>
+              system
+            </p>
+            <Activity />
+          </aside>
+        </div>
+
+        <hr className="tui-sep" />
+
+        {/* status bar */}
+        <div className="px-6 py-3 tui-status">
+          <span><span className="dot" /> &nbsp;online</span>
+          <span><kbd>↑</kbd>/<kbd>↓</kbd> move</span>
+          <span><kbd>⏎</kbd> open</span>
+          <span className="hidden sm:inline"><kbd>j</kbd>/<kbd>k</kbd> vim</span>
+          <span style={{ marginLeft: 'auto' }}><Clock /></span>
+        </div>
+      </Window>
+    </Screen>
   )
 }
