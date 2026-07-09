@@ -240,7 +240,6 @@ export function useMetrics() {
   const [tps, setTps] = useState(null)
   const [tpsSeries, setTpsSeries] = useState([])
   const [ethPrice, setEthPrice] = useState(null)
-  const [sp500, setSp500] = useState(null)
   const [fps, setFps] = useState(null)
 
   // status (drink log + active): now, then every 2 min
@@ -307,14 +306,8 @@ export function useMetrics() {
     return () => { alive = false; clearInterval(id) }
   }, [])
 
-  // s&p 500: now, then every 30 min (daily data is cached per day)
-  useEffect(() => {
-    let alive = true
-    const load = async () => { const m = await fetchSp500(); if (alive && m) setSp500(m) }
-    load()
-    const id = setInterval(load, 1800000)
-    return () => { alive = false; clearInterval(id) }
-  }, [])
+  // s&p 500 row is hidden for now (no keyless browser source). fetchSp500
+  // + SP500_API_KEY are left in place to re-wire when a source is chosen.
 
   // viewer's own render framerate
   useEffect(() => {
@@ -338,7 +331,6 @@ export function useMetrics() {
     commits: { days: commitDays, total: commitDays ? commitDays.reduce((a, b) => a + b, 0) : null },
     eth: { tps, series: tpsSeries },
     ethPrice, // { price, series } | null
-    sp500,    // { price, series, date } | null
     fps,
     active,
   }

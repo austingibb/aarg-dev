@@ -124,7 +124,7 @@ function MetricRow({ label, color, values, value }) {
  *   render   — the viewer's own framerate
  * ----------------------------------------------------------------- */
 export function Activity({ metrics }) {
-  const { caffeine, commits, eth, ethPrice, sp500, fps } = metrics
+  const { caffeine, commits, eth, ethPrice, fps } = metrics
   return (
     <div className="flex flex-col gap-2.5">
       <MetricRow
@@ -151,10 +151,6 @@ export function Activity({ metrics }) {
         </div>
         <PriceChart values={ethPrice?.series} color="cyan" floor={ethPrice?.floor} />
       </div>
-      <MetricRow
-        label="s&p" color="" values={sp500?.series}
-        value={sp500 ? `$${Math.round(sp500.price).toLocaleString()}` : '···'}
-      />
       <div className="flex items-center text-xs" style={{ gap: '0.9rem', color: 'var(--dim)' }}>
         <span style={{ width: '5em', flexShrink: 0 }}>render</span>
         <span
