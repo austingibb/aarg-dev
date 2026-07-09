@@ -114,8 +114,8 @@ export function Activity({ metrics }) {
         value={ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
       />
       <MetricRow
-        label="s&p 500" color="" values={sp500}
-        value={sp500 ? Math.round(sp500[sp500.length - 1]).toLocaleString() : '···'}
+        label="s&p" color="" values={sp500?.series}
+        value={sp500 ? `$${Math.round(sp500.price).toLocaleString()}` : '···'}
       />
       <div className="flex items-center text-xs" style={{ gap: '0.9rem', color: 'var(--dim)' }}>
         <span style={{ width: '5em', flexShrink: 0 }}>render</span>

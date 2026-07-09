@@ -158,24 +158,38 @@ export async function fetchEthPrice() {
 }
 
 /* ------------------------------------------------------------------
- * S&P 500 — 6 data points = 12-hour averages over the last 3 days.
- * No keyless, CORS-enabled source for index intraday exists (every
- * provider needs an API key, and one shared key can't back a public
- * site), so this reads a small cached blob your server publishes —
- * same pattern as the caffeine feed. See scripts/publish-market.mjs.
- * Expected shape:
- *   { "sp500": [5601.2, 5588.4, ... 6 numbers, oldest → newest] }
+ * S&P 500 — daily closes. No keyless, CORS-enabled index source exists,
+ * so this uses a free-tier API key + the SPY ETF (the S&P 500 tracker
+ * available on free plans). Grab a free key in ~30s (no card):
+ *   https://twelvedata.com/register
+ * then paste it below. Daily data changes once a day, so we cache per
+ * calendar day in localStorage — each visitor makes at most one request,
+ * which keeps the free quota comfortable no matter the traffic.
+ * (Want the real ^GSPC index number instead of the ETF? That needs a
+ *  plan with index data, or a server-side fetch — ask and I'll wire it.)
  * ------------------------------------------------------------------ */
-export const MARKET_URL = ''
+export const SP500_API_KEY = '' // <-- paste your free Twelve Data key here
+export const SP500_SYMBOL = 'SPY' // S&P 500 ETF; use 'GSPC' if your plan has indices
 
-export async function fetchMarket() {
-  if (!MARKET_URL) return null
+export async function fetchSp500() {
+  if (!SP500_API_KEY) return null
+  const today = new Date().toISOString().slice(0, 10)
   try {
-    const r = await fetch(MARKET_URL, { cache: 'no-store' })
+    const cached = JSON.parse(localStorage.getItem('sp500') || 'null')
+    if (cached && cached.date === today && Array.isArray(cached.series)) return cached
+  } catch { /* ignore bad cache */ }
+
+  try {
+    const url = `https://api.twelvedata.com/time_series?symbol=${SP500_SYMBOL}`
+      + `&interval=1day&outputsize=8&apikey=${SP500_API_KEY}`
+    const r = await fetch(url)
     if (!r.ok) return null
     const j = await r.json()
-    if (!Array.isArray(j.sp500) || j.sp500.length === 0) return null
-    return { sp500: j.sp500 }
+    if (!Array.isArray(j.values) || j.values.length === 0) return null
+    const series = j.values.map((v) => Number(v.close)).reverse() // oldest → newest
+    const out = { date: today, series, price: series[series.length - 1] }
+    try { localStorage.setItem('sp500', JSON.stringify(out)) } catch { /* ignore */ }
+    return out
   } catch {
     return null
   }
@@ -280,12 +294,12 @@ export function useMetrics() {
     return () => { alive = false; clearInterval(id) }
   }, [])
 
-  // s&p 500: now, then every 15 min (the blob updates slowly)
+  // s&p 500: now, then every 30 min (daily data is cached per day)
   useEffect(() => {
     let alive = true
-    const load = async () => { const m = await fetchMarket(); if (alive && m) setSp500(m.sp500) }
+    const load = async () => { const m = await fetchSp500(); if (alive && m) setSp500(m) }
     load()
-    const id = setInterval(load, 900000)
+    const id = setInterval(load, 1800000)
     return () => { alive = false; clearInterval(id) }
   }, [])
 
@@ -311,7 +325,7 @@ export function useMetrics() {
     commits: { days: commitDays, total: commitDays ? commitDays.reduce((a, b) => a + b, 0) : null },
     eth: { tps, series: tpsSeries },
     ethPrice, // { price, series } | null
-    sp500,    // number[] | null
+    sp500,    // { price, series, date } | null
     fps,
     active,
   }
