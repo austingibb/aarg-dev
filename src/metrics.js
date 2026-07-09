@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
 
 /* ==================================================================
  * Live metrics for the aarg.dev "system" panel.
@@ -323,4 +323,12 @@ export function useMetrics() {
     fps,
     active,
   }
+}
+
+/* Metrics live in a provider mounted above the router (see MetricsProvider),
+ * so the polled/rolling data survives client-side navigation — leave the
+ * home page and come back and nothing resets while the tab stays open. */
+export const MetricsContext = createContext(null)
+export function useMetricsValue() {
+  return useContext(MetricsContext)
 }

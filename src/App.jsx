@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Screen, Window, Prompt, Activity, Clock, StatusDot } from './terminal.jsx'
 import { useRovingMenu } from './useRovingMenu.js'
-import { useMetrics } from './metrics.js'
+import { useMetricsValue } from './metrics.js'
 
 const LINKS = [
   { label: 'blog',      hint: 'writing & notes',        to: '/blog' },
@@ -19,7 +19,7 @@ function ArrowGlyph() {
 export default function App() {
   const navigate = useNavigate()
   const { rowProps } = useRovingMenu(LINKS.length)
-  const metrics = useMetrics()
+  const metrics = useMetricsValue()
 
   return (
     <Screen max="64rem">
@@ -39,11 +39,11 @@ export default function App() {
             <Prompt cmd="cat about.txt" />
             <p className="mt-1.5 text-sm max-w-prose" style={{ color: 'var(--fg)' }}>
               My messy corner of the internet for my own tech services. Everyone keeps
-              wondering what Austin would do if he stopped coding — I guess we&apos;ll never know.
+              wondering what Austin would do if he stopped coding. I guess we&apos;ll never know.
             </p>
           </div>
           <div className="mt-4">
-            <Prompt cmd="ls ~/links" cursor />
+            <Prompt cmd="cd ~/links && ./links.sh" cursor />
           </div>
         </div>
 
@@ -92,9 +92,6 @@ export default function App() {
             className="w-full sm:w-80 shrink-0 px-6 py-5 border-t sm:border-t-0"
             style={{ borderColor: 'var(--border)' }}
           >
-            <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--amber)' }}>
-              system
-            </p>
             <Activity metrics={metrics} />
           </aside>
         </div>

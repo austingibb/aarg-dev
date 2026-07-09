@@ -126,39 +126,59 @@ function MetricRow({ label, color, values, value, span }) {
   )
 }
 
+/** A section header: amber title + a faint comment line beneath it. */
+function SectionLabel({ title, note }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--amber)' }}>{title}</p>
+      {note && (
+        <p style={{ color: 'var(--dim)', opacity: 0.7, fontSize: '0.62rem', marginTop: '2px' }}>
+          {note}
+        </p>
+      )}
+    </div>
+  )
+}
+
 /* ------------------------- activity panel ------------------------- *
- * Real telemetry, each metric confined to its own cell:
- *   caffeine — blood estimate (9 h half-life, computed live)
- *   commits  — your GitHub contributions, last 7 days
- *   eth tps  — live Ethereum transactions/sec
- *   render   — the viewer's own framerate
+ * Split into two jokes:
+ *   system        — austin's own vitals, metered like the machine he
+ *                   treats me as (caffeine, commits)
+ *   for fun graphs — external live data, purely for vibes (eth)
  * ----------------------------------------------------------------- */
 export function Activity({ metrics }) {
   const { caffeine, commits, eth, ethPrice } = metrics
   return (
-    <div className="flex flex-col gap-2.5">
-      <MetricRow
-        label="caffeine" color="amber" values={caffeine.series} span="10h"
-        value={caffeine.mg != null ? `${Math.round(caffeine.mg)}mg` : '—'}
-      />
-      <MetricRow
-        label="commits" color="" values={commits.days} span="7d"
-        value={commits.total != null ? String(commits.total) : '···'}
-      />
-      <MetricRow
-        label="eth tps" color="cyan" values={eth.series} span="~3m"
-        value={eth.tps != null ? String(Math.round(eth.tps)) : '···'}
-      />
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
-          <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>eth $</span>
-          <Span>3d</Span>
-          <span className="tabular-nums" style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
-            {ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
-          </span>
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-2.5">
+        <SectionLabel title="system" note="// you treat me like a machine. here's your telemetry." />
+        <MetricRow
+          label="caffeine" color="amber" values={caffeine.series} span="10h"
+          value={caffeine.mg != null ? `${Math.round(caffeine.mg)}mg` : '—'}
+        />
+        <MetricRow
+          label="commits" color="" values={commits.days} span="7d"
+          value={commits.total != null ? String(commits.total) : '···'}
+        />
+      </section>
+
+      <section className="flex flex-col gap-2.5">
+        <SectionLabel title="for fun graphs" note="// external, just for the vibes." />
+        <MetricRow
+          label="eth tps" color="cyan" values={eth.series} span="~3m"
+          value={eth.tps != null ? String(Math.round(eth.tps)) : '···'}
+        />
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center text-xs" style={{ gap: '0.9rem' }}>
+            <span style={{ color: 'var(--dim)', width: '5em', flexShrink: 0 }}>eth $</span>
+            <Span>3d</Span>
+            <span className="tabular-nums" style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
+              {ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'}
+            </span>
+          </div>
+          <PriceChart values={ethPrice?.series} color="cyan" floor={ethPrice?.floor} />
         </div>
-        <PriceChart values={ethPrice?.series} color="cyan" floor={ethPrice?.floor} />
-      </div>
+      </section>
     </div>
   )
 }
