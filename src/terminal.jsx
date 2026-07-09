@@ -157,7 +157,7 @@ export function Activity({ metrics }) {
           value={caffeine.mg != null ? `${Math.round(caffeine.mg)}mg` : '—'}
         />
         <MetricRow
-          label="commits" color="" values={commits.days} span="7d"
+          label="commits" color="" values={commits.days} span="2w"
           value={commits.total != null ? String(commits.total) : '···'}
         />
       </section>

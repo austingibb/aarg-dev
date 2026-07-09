@@ -75,8 +75,8 @@ export async function fetchCommitDays() {
     const r = await fetch(`https://github-contributions-api.jogruber.de/v4/${GH_USER}?y=last`)
     if (r.ok) {
       const j = await r.json()
-      const days = j.contributions.slice(-7).map((c) => c.count)
-      if (days.length === 7) return days
+      const days = j.contributions.slice(-14).map((c) => c.count)
+      if (days.length === 14) return days
     }
   } catch { /* fall through */ }
 
@@ -84,13 +84,13 @@ export async function fetchCommitDays() {
     const r = await fetch(`https://api.github.com/users/${GH_USER}/events/public?per_page=100`)
     if (r.ok) {
       const events = await r.json()
-      const days = new Array(7).fill(0)
+      const days = new Array(14).fill(0)
       const now = Date.now()
       for (const e of events) {
         if (e.type !== 'PushEvent') continue
         const age = (now - new Date(e.created_at).getTime()) / 8.64e7
-        if (age >= 0 && age <= 7) {
-          days[6 - Math.min(6, Math.floor(age))] += e.payload?.commits?.length || 0
+        if (age >= 0 && age <= 14) {
+          days[13 - Math.min(13, Math.floor(age))] += e.payload?.commits?.length || 0
         }
       }
       return days
