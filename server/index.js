@@ -34,6 +34,8 @@ const ROUTES = [
   // clip
   { method: 'GET',    re: /^\/api\/clip\/(?<path>[^/]+)$/,  handler: h.getClip,    auth: 'whitelisted' },
   { method: 'POST',   re: /^\/api\/clip$/,                    handler: h.createClip, auth: 'whitelisted' },
+  // market data (proxied + cached server-side; stock APIs are CORS-blocked in browsers)
+  { method: 'GET',    re: /^\/api\/market\/spx$/,             handler: h.marketSpx,  auth: 'public' },
 ]
 
 /* ---- helpers ---- */

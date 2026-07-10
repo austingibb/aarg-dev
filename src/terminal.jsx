@@ -196,7 +196,7 @@ function SectionLabel({ title, note }) {
  *   for fun graphs — external live data, purely for vibes (eth)
  * ----------------------------------------------------------------- */
 export function Activity({ metrics }) {
-  const { caffeine, commits, eth, ethPrice } = metrics
+  const { caffeine, commits, eth, ethPrice, sp500 } = metrics
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2.5">
@@ -223,6 +223,13 @@ export function Activity({ metrics }) {
             <Tail span="2w" kind="now" value={ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'} />
           </div>
           <PriceChart values={ethPrice?.series} color="cyan" floor={ethPrice?.floor} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center text-xs" style={{ gap: '0.8rem' }}>
+            <span style={{ color: 'var(--dim)', width: LABEL_W, flexShrink: 0 }}>s&amp;p 500</span>
+            <Tail span="2w" kind="now" value={sp500 ? `$${Math.round(sp500.price).toLocaleString()}` : '···'} />
+          </div>
+          <PriceChart values={sp500?.series} color="green" floor={sp500?.floor} />
         </div>
       </section>
     </div>

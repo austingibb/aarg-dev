@@ -164,38 +164,20 @@ export async function fetchEthPrice() {
 }
 
 /* ------------------------------------------------------------------
- * S&P 500 — daily closes. No keyless, CORS-enabled index source exists,
- * so this uses a free-tier API key + the SPY ETF (the S&P 500 tracker
- * available on free plans). Grab a free key in ~30s (no card):
- *   https://twelvedata.com/register
- * then paste it below. Daily data changes once a day, so we cache per
- * calendar day in localStorage — each visitor makes at most one request,
- * which keeps the free quota comfortable no matter the traffic.
- * (Want the real ^GSPC index number instead of the ETF? That needs a
- *  plan with index data, or a server-side fetch — ask and I'll wire it.)
+ * S&P 500 — real ^GSPC daily closes, keyless. Stock APIs are
+ * CORS-blocked in browsers, so our own backend proxies Yahoo Finance
+ * at /api/market/spx and caches it 10 min (see server/handlers.js).
  * ------------------------------------------------------------------ */
-export const SP500_API_KEY = '' // <-- paste your free Twelve Data key here
-export const SP500_SYMBOL = 'SPY' // S&P 500 ETF; use 'GSPC' if your plan has indices
-
 export async function fetchSp500() {
-  if (!SP500_API_KEY) return null
-  const today = new Date().toISOString().slice(0, 10)
   try {
-    const cached = JSON.parse(localStorage.getItem('sp500') || 'null')
-    if (cached && cached.date === today && Array.isArray(cached.series)) return cached
-  } catch { /* ignore bad cache */ }
-
-  try {
-    const url = `https://api.twelvedata.com/time_series?symbol=${SP500_SYMBOL}`
-      + `&interval=1day&outputsize=8&apikey=${SP500_API_KEY}`
-    const r = await fetch(url)
+    const r = await fetch('/api/market/spx')
     if (!r.ok) return null
     const j = await r.json()
-    if (!Array.isArray(j.values) || j.values.length === 0) return null
-    const series = j.values.map((v) => Number(v.close)).reverse() // oldest → newest
-    const out = { date: today, series, price: series[series.length - 1] }
-    try { localStorage.setItem('sp500', JSON.stringify(out)) } catch { /* ignore */ }
-    return out
+    if (!Array.isArray(j.series) || j.series.length === 0) return null
+    // y-axis floor: just under yesterday's close. The index moves ~1%/day,
+    // so eth's 0.6 floor would flatten the shape into a ruler — hug it.
+    const yClose = j.series.length > 1 ? j.series[j.series.length - 2] : j.series[0]
+    return { price: j.price, series: j.series, floor: 0.97 * yClose }
   } catch {
     return null
   }
@@ -232,6 +214,7 @@ export function useMetrics() {
   const [commitDays, setCommitDays] = useState(null)
   const [tpsSeries, setTpsSeries] = useState([])
   const [ethPrice, setEthPrice] = useState(null)
+  const [sp500, setSp500] = useState(null)
   const [fps, setFps] = useState(null)
 
   // status (drink log + active): now, then every 2 min
@@ -296,8 +279,14 @@ export function useMetrics() {
     return () => { alive = false; clearInterval(id) }
   }, [])
 
-  // s&p 500 row is hidden for now (no keyless browser source). fetchSp500
-  // + SP500_API_KEY are left in place to re-wire when a source is chosen.
+  // s&p 500: now, then every 15 min (server caches upstream for 10 min)
+  useEffect(() => {
+    let alive = true
+    const load = async () => { const p = await fetchSp500(); if (alive && p) setSp500(p) }
+    load()
+    const id = setInterval(load, 900000)
+    return () => { alive = false; clearInterval(id) }
+  }, [])
 
   // viewer's own render framerate
   useEffect(() => {
@@ -323,7 +312,8 @@ export function useMetrics() {
       total: tpsSeries.length ? tpsSeries.reduce((a, b) => a + b, 0) : null,
       series: tpsSeries,
     },
-    ethPrice, // { price, series } | null
+    ethPrice, // { price, series, floor } | null
+    sp500,    // { price, series, floor } | null
     fps,
     active,
   }

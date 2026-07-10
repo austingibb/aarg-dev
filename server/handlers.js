@@ -201,6 +201,36 @@ export function createClip({ res, body, ctx }) {
   return send(res, 200, { path, url: `/clip/${path}`, expires_at: expiresAt })
 }
 
+/* ---------------- market data proxy ----------------
+ * The browser can't fetch stock APIs directly (CORS/key-walled), so the
+ * backend proxies Yahoo Finance's keyless chart endpoint and caches it.
+ * One upstream request per 10 min max, regardless of visitor count;
+ * on upstream failure the last good payload is served stale. */
+const SPX_URL = 'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=1mo'
+const SPX_TTL = 10 * 60 * 1000
+let spxCache = { at: 0, data: null }
+
+export async function marketSpx({ res }) {
+  const now = Date.now()
+  if (spxCache.data && now - spxCache.at < SPX_TTL) return send(res, 200, spxCache.data)
+  try {
+    const r = await fetch(SPX_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (aarg.dev telemetry)' } })
+    if (!r.ok) throw new Error(`upstream ${r.status}`)
+    const j = await r.json()
+    const result = j?.chart?.result?.[0]
+    const closes = (result?.indicators?.quote?.[0]?.close || []).filter((c) => c != null)
+    if (closes.length === 0) throw new Error('no data')
+    const series = closes.slice(-14).map((c) => Math.round(c * 100) / 100)
+    const price = result.meta?.regularMarketPrice ?? series[series.length - 1]
+    spxCache = { at: now, data: { price, series } }
+    return send(res, 200, spxCache.data)
+  } catch (err) {
+    console.error('[spx]', err.message || err)
+    if (spxCache.data) return send(res, 200, spxCache.data) // stale beats nothing
+    return send(res, 502, { error: 'market data unavailable' })
+  }
+}
+
 /* ---- helpers ---- */
 function generatePath() {
   const CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789'
