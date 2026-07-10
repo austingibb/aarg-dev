@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { Screen, Window, Prompt, Button, Notice } from './terminal.jsx'
 import { getClip } from './api.js'
 
@@ -10,6 +10,7 @@ import { getClip } from './api.js'
 export default function ClipView() {
   const { path } = useParams()
   const navigate = useNavigate()
+  const fromAdmin = useLocation().state?.from === 'admin'
   const [clip, setClip] = useState(null)
   const [err, setErr] = useState('')
   const [status, setStatus] = useState('loading') // loading | ok | login | denied | unauthorized | missing
@@ -104,9 +105,15 @@ export default function ClipView() {
 
         <hr className="tui-sep" />
         <div className="px-6 py-3 tui-status">
-          <Link to="/clip" onClick={(e) => { e.preventDefault(); navigate('/clip') }} style={{ color: 'var(--amber)' }}>
-            ‹ new clip
-          </Link>
+          {fromAdmin ? (
+            <Link to="/admin" onClick={(e) => { e.preventDefault(); navigate('/admin', { state: { section: 'clips' } }) }} style={{ color: 'var(--red)' }}>
+              ‹ admin console
+            </Link>
+          ) : (
+            <Link to="/clip" onClick={(e) => { e.preventDefault(); navigate('/clip') }} style={{ color: 'var(--amber)' }}>
+              ‹ new clip
+            </Link>
+          )}
           <Link to="/" onClick={(e) => { e.preventDefault(); navigate('/') }} style={{ color: 'var(--dim)', marginLeft: 'auto' }}>
             ../ home
           </Link>

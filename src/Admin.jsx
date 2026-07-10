@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Screen, Window, Prompt, Field, Button, Notice, Confirm } from './terminal.jsx'
 import { useAuth } from './auth.js'
 import {
@@ -80,7 +80,10 @@ function AdminLogin({ refresh, navigate }) {
 
 /* ---------------- admin console ---------------- */
 function AdminConsole({ user, refresh, navigate }) {
-  const [section, setSection] = useState('whitelist') // 'whitelist' | 'clips'
+  // ClipView's "‹ admin console" back link passes { section: 'clips' } so the
+  // console reopens on the tab you left from.
+  const initialSection = useLocation().state?.section === 'clips' ? 'clips' : 'whitelist'
+  const [section, setSection] = useState(initialSection) // 'whitelist' | 'clips'
   const [wl, setWl] = useState([])
   const [clips, setClips] = useState([])
   const [err, setErr] = useState('')
@@ -225,7 +228,8 @@ function ClipsSection({ clips, reload }) {
       {clips.length === 0 && <p className="text-xs" style={{ color: 'var(--dim)' }}>no live clips.</p>}
       {clips.map((c) => (
         <div key={c.path} className="flex items-center gap-3 py-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
-          <Link to={`/clip/${c.path}`} style={{ color: 'var(--cyan)' }}>/{c.path}</Link>
+          {/* state.from lets ClipView's back link return here instead of "new clip" */}
+          <Link to={`/clip/${c.path}`} state={{ from: 'admin' }} style={{ color: 'var(--cyan)' }}>/{c.path}</Link>
           <span className="text-xs" style={{ color: 'var(--dim)' }}>by {c.created_by}</span>
           <span className="text-xs ml-auto" style={{ color: 'var(--dim)' }}>
             expires {new Date(c.expires_at).toLocaleString()}

@@ -169,7 +169,8 @@ export function getClip({ res, params, ctx }) {
   const now = Date.now()
   const clip = stmt.getLiveClip.get(path, now)
   if (!clip) return send(res, 404, { error: 'no such clip (or it expired)' })
-  if (clip.created_by !== ctx.email) {
+  // Owner-only, except admin can read any clip (e.g. from the admin console).
+  if (clip.created_by !== ctx.email && !ctx.admin) {
     return send(res, 403, { error: 'unauthorized — this clip belongs to another user' })
   }
   return send(res, 200, {

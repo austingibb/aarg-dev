@@ -86,7 +86,7 @@ function authorize(auth, session, ctx) {
   switch (auth) {
     case 'public': return null
     case 'user':     return session ? null : 401
-    case 'whitelisted': return ctx.whitelisted ? null : (session ? 403 : 401)
+    case 'whitelisted': return (ctx.whitelisted || ctx.admin) ? null : (session ? 403 : 401)
     case 'admin':    return ctx.admin ? null : 401
     default: return 500
   }
