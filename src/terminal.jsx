@@ -90,50 +90,34 @@ export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 
   for (let t = Math.ceil(lo / tick) * tick; t < top; t += tick) lines.push(t)
 
   return (
-    <div>
-      <div style={{ position: 'relative', height, borderBottom: '1px solid var(--border-lit)' }}>
-        {/* bars */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
-          {v.map((x, i) => (
-            <div
-              key={i}
-              style={{
-                flex: 1,
-                height: `${Math.max(2, ((x - lo) / span) * 100)}%`,
-                background: `var(--${color})`,
-                opacity: 0.5 + 0.45 * (i / (v.length - 1 || 1)), // brighten toward now
-                borderRadius: '1px 1px 0 0',
-              }}
-            />
-          ))}
-        </div>
-        {/* $tick gridlines across the chart, with level labels */}
-        {lines.map((t) => (
+    <div style={{ position: 'relative', height, borderBottom: '1px solid var(--border-lit)' }}>
+      {/* bars */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
+        {v.map((x, i) => (
           <div
-            key={t}
+            key={i}
             style={{
-              position: 'absolute', left: 0, right: 0,
-              bottom: `${((t - lo) / span) * 100}%`,
-              borderTop: '1px dashed var(--border-lit)',
-              opacity: 0.55, pointerEvents: 'none',
+              flex: 1,
+              height: `${Math.max(2, ((x - lo) / span) * 100)}%`,
+              background: `var(--${color})`,
+              opacity: 0.5 + 0.45 * (i / (v.length - 1 || 1)), // brighten toward now
+              borderRadius: '1px 1px 0 0',
             }}
-          >
-            <span
-              style={{
-                position: 'absolute', right: 0, top: '-0.72em',
-                fontSize: '0.55rem', lineHeight: 1, color: 'var(--dim)',
-                background: 'var(--bg-soft)', padding: '0 2px',
-              }}
-            >
-              {t.toLocaleString()}
-            </span>
-          </div>
+          />
         ))}
       </div>
-      {/* baseline (bottom of graph) value */}
-      <div style={{ fontSize: '0.55rem', color: 'var(--dim)', opacity: 0.85, marginTop: '2px' }}>
-        ${Math.round(lo).toLocaleString()}
-      </div>
+      {/* dotted $tick gridlines across the chart */}
+      {lines.map((t) => (
+        <div
+          key={t}
+          style={{
+            position: 'absolute', left: 0, right: 0,
+            bottom: `${((t - lo) / span) * 100}%`,
+            borderTop: '1px dotted var(--border-lit)',
+            opacity: 0.6, pointerEvents: 'none',
+          }}
+        />
+      ))}
     </div>
   )
 }
