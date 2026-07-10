@@ -1,18 +1,20 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Screen, Window, Prompt, Field, TextArea, Button, Notice } from './terminal.jsx'
 import { useAuth } from './auth.js'
 import { createClip } from './api.js'
 
 /* Create a clip. Guards: not logged in → redirect /login?next=/clip;
- * not whitelisted → red notice. Custom path (blank = generated short url),
+ * not whitelisted → red notice. Custom path (blank = generated short url,
+ * pre-filled from ?path= when arriving via "make clip for this path"),
  * content textarea, create button. On success shows the /clip/<path> link,
  * a copy-URL button, and the expiry. */
 export default function Clip() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [params] = useSearchParams()
 
-  const [path, setPath] = useState('')
+  const [path, setPath] = useState(() => params.get('path') || '')
   const [content, setContent] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)

@@ -4,8 +4,9 @@ import { Screen, Window, Prompt, Button, Notice } from './terminal.jsx'
 import { getClip } from './api.js'
 
 /* Read a clip by path. 401 → /login?next=/clip/<path>; 403 → not-whitelisted
- * notice; 404 → "no such clip (or it expired)". Content in a read-only <pre>
- * styled like tui-input; header with path + expires-in; copy button. */
+ * notice; 404 → "no such clip (or it expired)" + a button to create a clip at
+ * this path. Content in a read-only <pre> styled like tui-input; header with
+ * path + expires-in; copy button; follow button when the content is a URL. */
 export default function ClipView() {
   const { path } = useParams()
   const navigate = useNavigate()
@@ -72,7 +73,12 @@ export default function ClipView() {
         )}
 
         {status === 'missing' && (
-          <div className="px-6 py-10"><Notice kind="error">{err || 'no such clip (or it expired)'}</Notice></div>
+          <div className="px-6 py-10 flex flex-col gap-4">
+            <Notice kind="error">{err || 'no such clip (or it expired)'}</Notice>
+            <Button onClick={() => navigate(`/clip?path=${encodeURIComponent(path)}`)}>
+              make clip for this path
+            </Button>
+          </div>
         )}
 
         {status === 'ok' && clip && (
@@ -85,7 +91,14 @@ export default function ClipView() {
             <pre className="tui-input" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto' }}>
 {clip.content}
             </pre>
-            <Button onClick={copy}>{copied ? 'copied!' : 'copy content'}</Button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button onClick={copy}>{copied ? 'copied!' : 'copy content'}</Button>
+              {clipUrl(clip.content) && (
+                <Button onClick={() => window.open(clipUrl(clip.content), '_blank', 'noopener,noreferrer')}>
+                  follow clip url ↗
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
@@ -101,6 +114,16 @@ export default function ClipView() {
       </Window>
     </Screen>
   )
+}
+
+/* If the clip content is exactly one http(s) URL, return its href; else null. */
+function clipUrl(content) {
+  const t = (content || '').trim()
+  if (!t || /\s/.test(t)) return null
+  try {
+    const u = new URL(t)
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null
+  } catch { return null }
 }
 
 function expiresIn(exp) {
