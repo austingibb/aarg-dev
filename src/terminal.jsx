@@ -64,7 +64,9 @@ export function Spark({ values, color = '', width = 14 }) {
   const glyphs = v.map((x) => BLOCKS[Math.round(((x - min) / span) * 7)]).join('')
   const pad = width - v.length
   return (
-    <span className={`spark ${color}`}>
+    // flexShrink 0: never let a tight flex row shrink+clip the newest bars
+    // (the right end is the live data — losing it is the worst possible crop)
+    <span className={`spark ${color}`} style={{ flexShrink: 0 }}>
       {pad > 0 && <span style={{ opacity: 0.4 }}>{'·'.repeat(pad)}</span>}
       {glyphs}
     </span>
@@ -200,7 +202,7 @@ export function Activity({ metrics }) {
       <section className="flex flex-col gap-2.5">
         <SectionLabel title="system" note="// austin telemetry" />
         <MetricRow
-          label="caffeine" color="amber" values={caffeine.series} span="14h" kind="now"
+          label="caffeine" color="amber" values={caffeine.series} span="13h" kind="now"
           value={caffeine.mg != null ? `${Math.round(caffeine.mg)}mg` : '—'}
         />
         <MetricRow

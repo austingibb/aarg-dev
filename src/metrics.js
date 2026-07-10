@@ -43,13 +43,20 @@ export function caffeineAt(drinks, tMs) {
   return total
 }
 
-/** Sample the caffeine curve over the last `hours`, ending at `now`
- *  (default 14 points over 14h = one bar per hour). */
-export function caffeineSeries(drinks, now, hours = 14, n = 14) {
+/** Sample the caffeine curve as fixed hourly buckets + one live bar.
+ *  The first n-1 points sit on top-of-the-hour marks — solidified, they
+ *  never move once their hour completes. The final point is sampled at
+ *  `now`, so the last bar rises/decays in real time (and always equals
+ *  the displayed mg); when the hour rolls over it freezes into the next
+ *  fixed mark and a new live bar begins. */
+export function caffeineSeries(drinks, now, n = 14) {
+  const H = 3.6e6 // one hour in ms
+  const lastMark = Math.floor(now / H) * H
   const out = []
-  for (let i = n - 1; i >= 0; i--) {
-    out.push(caffeineAt(drinks, now - (i / (n - 1)) * hours * 3.6e6))
+  for (let i = n - 2; i >= 0; i--) {
+    out.push(caffeineAt(drinks, lastMark - i * H))
   }
+  out.push(caffeineAt(drinks, now))
   return out
 }
 
@@ -86,12 +93,14 @@ export async function fetchCommitDays() {
     if (r.ok) {
       const events = await r.json()
       const days = new Array(14).fill(0)
-      const now = Date.now()
+      // Calendar-day buckets (local): completed days are fixed, today is the
+      // live last bar — same solidify-on-rollover model as the caffeine series.
+      const todayMidnight = new Date().setHours(0, 0, 0, 0)
       for (const e of events) {
         if (e.type !== 'PushEvent') continue
-        const age = (now - new Date(e.created_at).getTime()) / 8.64e7
-        if (age >= 0 && age <= 14) {
-          days[13 - Math.min(13, Math.floor(age))] += e.payload?.commits?.length || 0
+        const d = Math.floor((todayMidnight - new Date(e.created_at).setHours(0, 0, 0, 0)) / 8.64e7)
+        if (d >= 0 && d <= 13) {
+          days[13 - d] += e.payload?.commits?.length || 0
         }
       }
       return days
