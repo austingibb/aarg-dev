@@ -352,6 +352,14 @@ body::before {
 .tui-row.is-admin.is-sel .caret,
 .tui-row.is-admin.is-sel .arrow { color: var(--red); }
 
+/* ---- terminal log output reveal (home shell) -------------- */
+
+.term-out { animation: out-in 0.12s ease-out both; }
+@keyframes out-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* ---- inline command prompt on the home page ---- */
 
 .tui-prompt-line {

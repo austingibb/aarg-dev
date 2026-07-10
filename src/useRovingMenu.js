@@ -23,6 +23,7 @@ export function useRovingMenu(count) {
 
   useEffect(() => {
     function onKey(e) {
+      if (count === 0) return // menu not mounted (e.g. links.sh not running)
       const t = e.target
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
 
