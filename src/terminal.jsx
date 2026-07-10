@@ -74,8 +74,9 @@ export function Spark({ values, color = '', width = 14 }) {
 /* A taller bar chart with an intelligent baseline: it starts at `floor`
  * (e.g. 0.6 * yesterday's average) to crop the dead bottom of the range
  * without hugging the min. If price dips below the floor, the baseline
- * recalcs just under the low so bars never clip. */
-export function PriceChart({ values, color = 'cyan', height = '2.75rem', floor = 0 }) {
+ * recalcs just under the low so bars never clip. Horizontal gridlines
+ * mark every `tick` dollars, and the baseline value is printed below. */
+export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 0, tick = 250 }) {
   const v = Array.isArray(values) ? values : []
   if (v.length === 0) {
     return <div style={{ height, opacity: 0.4, color: 'var(--dim)' }} className="text-xs">no data</div>
@@ -83,20 +84,56 @@ export function PriceChart({ values, color = 'cyan', height = '2.75rem', floor =
   const lo = Math.min(floor, Math.min(...v) * 0.995) // recalc down if price breached the floor
   const top = Math.max(...v) * 1.02
   const span = top - lo || 1
+
+  // gridline levels: multiples of `tick` inside the visible range
+  const lines = []
+  for (let t = Math.ceil(lo / tick) * tick; t < top; t += tick) lines.push(t)
+
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height }}>
-      {v.map((x, i) => (
-        <div
-          key={i}
-          style={{
-            flex: 1,
-            height: `${Math.max(2, ((x - lo) / span) * 100)}%`,
-            background: `var(--${color})`,
-            opacity: 0.55 + 0.45 * (i / (v.length - 1 || 1)), // brighten toward now
-            borderRadius: '1px 1px 0 0',
-          }}
-        />
-      ))}
+    <div>
+      <div style={{ position: 'relative', height, borderBottom: '1px solid var(--border-lit)' }}>
+        {/* bars */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
+          {v.map((x, i) => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                height: `${Math.max(2, ((x - lo) / span) * 100)}%`,
+                background: `var(--${color})`,
+                opacity: 0.5 + 0.45 * (i / (v.length - 1 || 1)), // brighten toward now
+                borderRadius: '1px 1px 0 0',
+              }}
+            />
+          ))}
+        </div>
+        {/* $tick gridlines across the chart, with level labels */}
+        {lines.map((t) => (
+          <div
+            key={t}
+            style={{
+              position: 'absolute', left: 0, right: 0,
+              bottom: `${((t - lo) / span) * 100}%`,
+              borderTop: '1px dashed var(--border-lit)',
+              opacity: 0.55, pointerEvents: 'none',
+            }}
+          >
+            <span
+              style={{
+                position: 'absolute', right: 0, top: '-0.72em',
+                fontSize: '0.55rem', lineHeight: 1, color: 'var(--dim)',
+                background: 'var(--bg-soft)', padding: '0 2px',
+              }}
+            >
+              {t.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* baseline (bottom of graph) value */}
+      <div style={{ fontSize: '0.55rem', color: 'var(--dim)', opacity: 0.85, marginTop: '2px' }}>
+        ${Math.round(lo).toLocaleString()}
+      </div>
     </div>
   )
 }
