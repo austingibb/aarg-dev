@@ -198,7 +198,7 @@ export function Activity({ metrics }) {
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2.5">
-        <SectionLabel title="system" note="// you treat me like a machine. here's your telemetry." />
+        <SectionLabel title="system" note="// austin telemetry" />
         <MetricRow
           label="caffeine" color="amber" values={caffeine.series} span="14h" kind="now"
           value={caffeine.mg != null ? `${Math.round(caffeine.mg)}mg` : '—'}
