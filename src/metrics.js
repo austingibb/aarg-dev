@@ -19,14 +19,14 @@ export const GH_USER = 'austingibb'
  *                   "mg": 95 }, ... ]        // caffeine dose in mg
  *   }
  *
- * The blood-caffeine estimate (9 h elimination half-life + a short
+ * The blood-caffeine estimate (5.5 h elimination half-life + a short
  * absorption ramp) is computed here, in the browser, so the number
  * decays smoothly in real time between fetches. If the feed is
  * unreachable the caffeine metric shows "—" rather than faking a value.
  * ------------------------------------------------------------------ */
 export const STATUS_URL = 'https://aarg-status.s3.us-west-2.amazonaws.com/caffeine.json'
 
-const HALF_LIFE_H = 9      // caffeine elimination half-life (hours)
+const HALF_LIFE_H = 5.5    // caffeine elimination half-life (hours)
 const ABSORB_H = 0.5       // ~30 min to fully absorb / peak
 
 /** Estimated blood caffeine (mg) contributed by all drinks at time tMs. */
