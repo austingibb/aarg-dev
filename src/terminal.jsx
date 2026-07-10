@@ -136,17 +136,25 @@ export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 
 /* Fixed column widths so the sparkline, time-span label, and value each
  * sit in their own column and line up across every row, regardless of
  * how wide the text is. */
-const LABEL_W = '5em'
+const LABEL_W = '9.8em' // wide enough for "eth transactions"
 const SPARK_W = 14   // one cell per point for the 14-point (2-week / 14h) series
 const SPAN_W = '2.4em'
 const VALUE_W = '4.7em'
 
-/** The right-hand pair of fixed columns: time-span label, then value. */
-function Tail({ span, value }) {
+/** The right-hand pair of fixed columns: time-span + kind, then value.
+ *  `kind` says what the number is: 'Σ' = sum over the window,
+ *  'now' = the current / latest value. */
+function Tail({ span, kind, value }) {
   return (
-    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexShrink: 0 }}>
-      <span style={{ width: SPAN_W, textAlign: 'right', color: 'var(--dim)', opacity: 0.7, fontSize: '0.62rem' }}>
-        {span}
+    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+      <span
+        style={{
+          width: SPAN_W, textAlign: 'right', color: 'var(--dim)', opacity: 0.7,
+          fontSize: '0.62rem', display: 'flex', flexDirection: 'column', lineHeight: 1.25,
+        }}
+      >
+        <span>{span}</span>
+        {kind && <span style={{ opacity: 0.8 }}>{kind}</span>}
       </span>
       <span className="tabular-nums" style={{ width: VALUE_W, textAlign: 'right', color: 'var(--fg)', whiteSpace: 'nowrap' }}>
         {value}
@@ -155,12 +163,12 @@ function Tail({ span, value }) {
   )
 }
 
-function MetricRow({ label, color, values, value, span }) {
+function MetricRow({ label, color, values, value, span, kind }) {
   return (
     <div className="flex items-center text-xs" style={{ gap: '0.8rem' }}>
       <span style={{ color: 'var(--dim)', width: LABEL_W, flexShrink: 0 }}>{label}</span>
       <Spark values={values} color={color} width={SPARK_W} />
-      <Tail span={span} value={value} />
+      <Tail span={span} kind={kind} value={value} />
     </div>
   )
 }
@@ -192,11 +200,11 @@ export function Activity({ metrics }) {
       <section className="flex flex-col gap-2.5">
         <SectionLabel title="system" note="// you treat me like a machine. here's your telemetry." />
         <MetricRow
-          label="caffeine" color="amber" values={caffeine.series} span="14h"
+          label="caffeine" color="amber" values={caffeine.series} span="14h" kind="now"
           value={caffeine.mg != null ? `${Math.round(caffeine.mg)}mg` : '—'}
         />
         <MetricRow
-          label="commits" color="" values={commits.days} span="2w"
+          label="commits" color="" values={commits.days} span="2w" kind="Σ"
           value={commits.total != null ? String(commits.total) : '···'}
         />
       </section>
@@ -204,13 +212,13 @@ export function Activity({ metrics }) {
       <section className="flex flex-col gap-2.5">
         <SectionLabel title="for fun graphs" note="// external, just for the vibes." />
         <MetricRow
-          label="eth tps" color="cyan" values={eth.series} span="~3m"
-          value={eth.tps != null ? String(Math.round(eth.tps)) : '···'}
+          label="eth transactions" color="cyan" values={eth.series} span="~3m" kind="Σ"
+          value={eth.total != null ? eth.total.toLocaleString() : '···'}
         />
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center text-xs" style={{ gap: '0.8rem' }}>
             <span style={{ color: 'var(--dim)', width: LABEL_W, flexShrink: 0 }}>eth $</span>
-            <Tail span="2w" value={ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'} />
+            <Tail span="2w" kind="now" value={ethPrice ? `$${Math.round(ethPrice.price).toLocaleString()}` : '···'} />
           </div>
           <PriceChart values={ethPrice?.series} color="cyan" floor={ethPrice?.floor} />
         </div>

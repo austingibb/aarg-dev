@@ -221,7 +221,6 @@ export function useMetrics() {
   const [mg, setMg] = useState(null)
   const [caffSeries, setCaffSeries] = useState([])
   const [commitDays, setCommitDays] = useState(null)
-  const [tps, setTps] = useState(null)
   const [tpsSeries, setTpsSeries] = useState([])
   const [ethPrice, setEthPrice] = useState(null)
   const [fps, setFps] = useState(null)
@@ -262,20 +261,17 @@ export function useMetrics() {
     return () => { alive = false; clearInterval(id) }
   }, [])
 
-  // eth tps: poll the chain head every 12 s (~block time)
+  // eth transactions: poll the chain head every 12 s (~block time) and
+  // record each new block's tx count; the displayed value is the sum
+  // over the graphed blocks
   useEffect(() => {
     let alive = true
-    const prev = { num: null, ts: null }
+    const prev = { num: null }
     const poll = async () => {
       const b = await fetchEthBlock()
-      if (!alive || !b) return
-      const t = prev.num && b.number !== prev.num && b.ts > prev.ts
-        ? b.txCount / (b.ts - prev.ts)   // real interval between blocks
-        : b.txCount / 12                 // first sample: nominal block time
+      if (!alive || !b || b.number === prev.num) return // skip repeat blocks
       prev.num = b.number
-      prev.ts = b.ts
-      setTps(t)
-      setTpsSeries((s) => [...s.slice(-15), t])
+      setTpsSeries((s) => [...s.slice(-13), b.txCount])
     }
     poll()
     const id = setInterval(poll, 12000)
@@ -314,7 +310,10 @@ export function useMetrics() {
   return {
     caffeine: { mg, series: caffSeries, active },
     commits: { days: commitDays, total: commitDays ? commitDays.reduce((a, b) => a + b, 0) : null },
-    eth: { tps, series: tpsSeries },
+    eth: {
+      total: tpsSeries.length ? tpsSeries.reduce((a, b) => a + b, 0) : null,
+      series: tpsSeries,
+    },
     ethPrice, // { price, series } | null
     fps,
     active,
