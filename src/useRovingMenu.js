@@ -11,6 +11,10 @@ export function useRovingMenu(count) {
   const [selected, setSelected] = useState(0)
   const refs = useRef([])
 
+  // Clamp selection when the menu shrinks (auth state changes the row count).
+  // Derived value — no effect needed, so no cascading renders.
+  const sel = count === 0 ? 0 : Math.min(selected, Math.max(0, count - 1))
+
   const focusRow = useCallback((i) => {
     setSelected(i)
     const el = refs.current[i]
@@ -26,12 +30,12 @@ export function useRovingMenu(count) {
         case 'ArrowDown':
         case 'j':
           e.preventDefault()
-          focusRow((selected + 1) % count)
+          focusRow((sel + 1) % count)
           break
         case 'ArrowUp':
         case 'k':
           e.preventDefault()
-          focusRow((selected - 1 + count) % count)
+          focusRow((sel - 1 + count) % count)
           break
         case 'Home':
         case 'g':
@@ -45,9 +49,9 @@ export function useRovingMenu(count) {
           break
         case 'Enter': {
           const active = document.activeElement
-          if (refs.current[selected] && active !== refs.current[selected]) {
+          if (refs.current[sel] && active !== refs.current[sel]) {
             e.preventDefault()
-            refs.current[selected].click()
+            refs.current[sel].click()
           }
           break
         }
@@ -56,15 +60,15 @@ export function useRovingMenu(count) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selected, count, focusRow])
+  }, [sel, count, focusRow])
 
   const rowProps = (i) => ({
     ref: (el) => { refs.current[i] = el },
-    className: `tui-row ${selected === i ? 'is-sel' : ''}`,
+    className: `tui-row ${sel === i ? 'is-sel' : ''}`,
     tabIndex: 0,
     onMouseEnter: () => setSelected(i),
     onFocus: () => setSelected(i),
   })
 
-  return { selected, rowProps }
+  return { selected: sel, rowProps }
 }

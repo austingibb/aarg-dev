@@ -1,6 +1,12 @@
 # Service
 scripts/nssm.exe
 
+# Secrets & local data
+.env
+.env.*
+!*.env.example
+data/
+
 # Logs
 logs
 *.log

@@ -1,7 +1,10 @@
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Screen, Window, Prompt, Activity, Clock, StatusDot } from './terminal.jsx'
+import { Screen, Window, Prompt, Activity, Clock, StatusDot, Field, Button, Notice, Confirm } from './terminal.jsx'
 import { useRovingMenu } from './useRovingMenu.js'
 import { useMetricsValue } from './metrics.js'
+import { useAuth } from './auth.js'
+import { adminLogin, logout } from './api.js'
 
 const LINKS = [
   { label: 'blog',      hint: 'writing & notes',        to: '/blog' },
@@ -18,8 +21,84 @@ function ArrowGlyph() {
 
 export default function App() {
   const navigate = useNavigate()
-  const { rowProps } = useRovingMenu(LINKS.length)
   const metrics = useMetricsValue()
+  const { user, refresh } = useAuth()
+
+  // Dynamic links: base + (whitelisted? amber clip) + (email? logout : login) + (admin? red admin).
+  const links = [
+    ...LINKS,
+    ...(user?.whitelisted ? [{ label: 'clip', hint: 'ephemeral text drop', to: '/clip', variant: 'clip' }] : []),
+    ...(user?.email
+      ? [{ label: 'logout', hint: user.email, action: 'logout' }]
+      : [{ label: 'login',  hint: 'sign in / sign up', to: '/login' }]),
+    ...(user?.admin ? [{ label: 'admin', hint: 'root console', to: '/admin', variant: 'admin' }] : []),
+  ]
+
+  const { rowProps } = useRovingMenu(links.length)
+
+  // ---- command prompt state ----
+  const [cmd, setCmd] = useState('')
+  const [adminPrompt, setAdminPrompt] = useState(null) // null | { psk, totp, err, busy }
+  const [notice, setNotice] = useState(null)            // { kind, text }
+  const [confirmLogout, setConfirmLogout] = useState(false)
+  const inputRef = useRef(null)
+
+  // Esc focuses the command prompt.
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        inputRef.current?.focus()
+        setAdminPrompt(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  function runCommand(raw) {
+    const c = raw.trim()
+    if (!c) return
+    setNotice(null)
+
+    if (c === '.\\admin-login.sh' || c === './admin-login.sh' || c === 'admin-login') {
+      setAdminPrompt({ psk: '', totp: '', err: '', busy: false })
+      setCmd('')
+      return
+    }
+    if (c === 'help') {
+      setNotice({ kind: 'info', text: 'commands: .\\admin-login.sh — open the root login prompt' })
+      setCmd('')
+      return
+    }
+    setNotice({ kind: 'error', text: `command not found: ${c}` })
+    setCmd('')
+  }
+
+  async function submitAdmin(e) {
+    e?.preventDefault()
+    if (!adminPrompt || adminPrompt.busy) return
+    if (!adminPrompt.psk || adminPrompt.totp.length !== 6) {
+      setAdminPrompt({ ...adminPrompt, err: 'psk and 6-digit totp required' })
+      return
+    }
+    setAdminPrompt({ ...adminPrompt, busy: true, err: '' })
+    try {
+      await adminLogin(adminPrompt.psk, adminPrompt.totp)
+      await refresh()
+      setAdminPrompt(null)
+      setNotice({ kind: 'ok', text: 'root session active — 12h' })
+    } catch (e2) {
+      setAdminPrompt({ ...adminPrompt, busy: false, err: e2?.error || 'invalid credentials', psk: '', totp: '' })
+    }
+  }
+
+  async function doLogout() {
+    await logout()
+    await refresh()
+    setConfirmLogout(false)
+    setNotice({ kind: 'info', text: 'logged out' })
+  }
 
   return (
     <Screen max="64rem">
@@ -43,7 +122,49 @@ export default function App() {
             </p>
           </div>
           <div className="mt-4">
-            <Prompt cmd="cd ~/links && ./links.sh" cursor />
+            {/* command prompt — Esc to focus, type .\admin-login.sh for root login */}
+            <div className="tui-prompt-line">
+              <span className="prompt-sign">austin@aarg.dev</span>
+              <span style={{ color: 'var(--dim)' }}>:</span>
+              <span className="prompt-path">~</span>
+              <span style={{ color: 'var(--dim)' }}>$ </span>
+              <input
+                ref={inputRef}
+                className="tui-prompt-input"
+                value={cmd}
+                placeholder="type a command — esc to focus"
+                onChange={(e) => setCmd(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') runCommand(cmd) }}
+                autoComplete="off" spellCheck="false"
+              />
+            </div>
+            {notice && <div className="mt-2"><Notice kind={notice.kind}>{notice.text}</Notice></div>}
+
+            {/* inline admin login (PSK + TOTP) — opened by .\admin-login.sh */}
+            {adminPrompt && (
+              <form onSubmit={submitAdmin} className="mt-3 flex flex-col gap-3" style={{ maxWidth: '24rem' }}>
+                <Field
+                  label="psk" type="password" value={adminPrompt.psk}
+                  autoFocus autoComplete="off"
+                  placeholder="••••••••"
+                  onChange={(v) => setAdminPrompt({ ...adminPrompt, psk: v })}
+                  onEnter={submitAdmin}
+                />
+                <Field
+                  label="totp (6 digits)" value={adminPrompt.totp}
+                  onChange={(v) => setAdminPrompt({ ...adminPrompt, totp: v.replace(/\D/g, '').slice(0, 6) })}
+                  onEnter={submitAdmin} placeholder="000000" autoComplete="one-time-code"
+                />
+                <div className="flex items-center gap-3">
+                  <Button onClick={submitAdmin} disabled={adminPrompt.busy || !adminPrompt.psk || adminPrompt.totp.length !== 6}>
+                    {adminPrompt.busy ? '…' : 'authenticate'}
+                  </Button>
+                  <button type="button" className="text-xs" style={{ color: 'var(--dim)' }}
+                    onClick={() => setAdminPrompt(null)}>cancel</button>
+                </div>
+                {adminPrompt.err && <Notice kind="error">{adminPrompt.err}</Notice>}
+              </form>
+            )}
           </div>
         </div>
 
@@ -57,8 +178,10 @@ export default function App() {
             className="flex-1 py-3 sm:border-r"
             style={{ borderColor: 'var(--border)' }}
           >
-            {LINKS.map((item, i) => {
+            {links.map((item, i) => {
               const common = rowProps(i)
+              const variantClass = item.variant === 'admin' ? ' is-admin' : ''
+              const className = `${common.className}${variantClass}`
               const inner = (
                 <>
                   <span className="caret" aria-hidden="true">›</span>
@@ -70,17 +193,36 @@ export default function App() {
                   <ArrowGlyph />
                 </>
               )
+              if (item.action === 'logout') {
+                return (
+                  <a
+                    key={item.label}
+                    {...common}
+                    className={className}
+                    href="/"
+                    onClick={(e) => { e.preventDefault(); setConfirmLogout(true) }}
+                  >
+                    {inner}
+                  </a>
+                )
+              }
               return item.to ? (
                 <a
                   key={item.label}
                   {...common}
+                  className={className}
                   href={item.to}
                   onClick={(e) => { e.preventDefault(); navigate(item.to) }}
                 >
                   {inner}
                 </a>
               ) : (
-                <a key={item.label} {...common} href={item.href} target="_blank" rel="noopener noreferrer">
+                <a
+                  key={item.label}
+                  {...common}
+                  className={className}
+                  href={item.href} target="_blank" rel="noopener noreferrer"
+                >
                   {inner}
                 </a>
               )
@@ -96,6 +238,17 @@ export default function App() {
           </aside>
         </div>
 
+        {confirmLogout && (
+          <div className="px-6 py-4">
+            <Confirm
+              message="log out of your user account? (admin session stays active)"
+              confirmLabel="log out"
+              onConfirm={doLogout}
+              onCancel={() => setConfirmLogout(false)}
+            />
+          </div>
+        )}
+
         <hr className="tui-sep" />
 
         {/* status bar */}
@@ -103,8 +256,14 @@ export default function App() {
           <StatusDot active={metrics.active} />
           <span><kbd>↑</kbd>/<kbd>↓</kbd> move</span>
           <span><kbd>⏎</kbd> open</span>
+          <span><kbd>esc</kbd> prompt</span>
           <span className="hidden sm:inline"><kbd>j</kbd>/<kbd>k</kbd> vim</span>
-          <span style={{ marginLeft: 'auto' }}><Clock /></span>
+          <span style={{ marginLeft: 'auto' }}>
+            <span style={{ color: 'var(--dim)' }}>{user?.email ?? 'guest'}</span>
+            {user?.admin && <span style={{ color: 'var(--red)' }}> · root</span>}
+            <span style={{ color: 'var(--dim)' }}> · </span>
+            <Clock />
+          </span>
         </div>
       </Window>
     </Screen>

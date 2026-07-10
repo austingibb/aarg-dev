@@ -247,3 +247,79 @@ export function Clock() {
   const t = now.toLocaleTimeString('en-US', { hour12: false })
   return <span style={{ color: 'var(--fg)' }}>{t}</span>
 }
+
+/* ============================================================
+   Form primitives — the first real inputs on aarg.dev.
+   Safe alongside useRovingMenu, which ignores INPUT/TEXTAREA keys
+   (see useRovingMenu.js — the INPUT/TEXTAREA guard).
+   ============================================================ */
+
+/** A labeled single-line input. */
+export function Field({ label, type = 'text', value, onChange, placeholder, autoFocus, onEnter, name, autoComplete }) {
+  return (
+    <label className="tui-field">
+      {label && <span className="tui-field-label">{label}</span>}
+      <input
+        className="tui-input"
+        type={type}
+        name={name}
+        value={value}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        autoComplete={autoComplete}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter(e) }}
+      />
+    </label>
+  )
+}
+
+/** A labeled multi-line textarea. */
+export function TextArea({ label, value, onChange, rows = 6, placeholder }) {
+  return (
+    <label className="tui-field">
+      {label && <span className="tui-field-label">{label}</span>}
+      <textarea
+        className="tui-input tui-textarea"
+        rows={rows}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  )
+}
+
+/** A button. `variant="danger"` renders red (admin destructive actions). */
+export function Button({ children, onClick, variant = '', type = 'button', disabled }) {
+  return (
+    <button
+      type={type}
+      className={`tui-btn${variant ? ` ${variant}` : ''}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </button>
+  )
+}
+
+/** A one-line status line: red (error), green (ok), or dim (info). */
+export function Notice({ kind = 'info', children }) {
+  const color = kind === 'error' ? 'var(--red)' : kind === 'ok' ? 'var(--green)' : 'var(--dim)'
+  if (!children) return null
+  return <p className="tui-notice" style={{ color }}>{children}</p>
+}
+
+/** A yes/no confirmation dialog. `variant="danger"` styles the confirm button red. */
+export function Confirm({ message, confirmLabel = 'confirm', cancelLabel = 'cancel', variant = '', onConfirm, onCancel }) {
+  return (
+    <div className="tui-confirm">
+      <p style={{ color: 'var(--fg-strong)', fontSize: '0.85rem' }}>{message}</p>
+      <div className="flex items-center gap-3 mt-3">
+        <Button variant={variant} onClick={onConfirm}>{confirmLabel}</Button>
+        <Button onClick={onCancel}>{cancelLabel}</Button>
+      </div>
+    </div>
+  )
+}
