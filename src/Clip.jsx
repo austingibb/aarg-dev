@@ -14,7 +14,7 @@ const FILE_MAX_BYTES = 5 * 1024 * 1024
  * a copy-URL button, and the expiry. */
 export default function Clip() {
   const navigate = useNavigate()
-  const location = useLocation()
+  const routeLocation = useLocation()
   const { user } = useAuth()
   const [params] = useSearchParams()
   const replacePath = params.get('replace') || ''
@@ -37,7 +37,7 @@ export default function Clip() {
 
   // Guest → redirect to login.
   if (user !== null && !user.email) {
-    navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`, { replace: true })
+    navigate(`/login?next=${encodeURIComponent(routeLocation.pathname + routeLocation.search)}`, { replace: true })
     return null
   }
   if (user && user.email && !user.whitelisted) {
@@ -111,7 +111,7 @@ export default function Clip() {
 
   async function copyUrl() {
     try {
-      await navigator.clipboard.writeText(`${location.origin}${created.url}`)
+      await navigator.clipboard.writeText(`${window.location.origin}${created.url}`)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch { setErr('could not copy') }
