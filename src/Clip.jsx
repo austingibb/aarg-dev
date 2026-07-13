@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom'
 import { Screen, Window, Prompt, Field, TextArea, Button, Notice } from './terminal.jsx'
 import { useAuth } from './auth.js'
 import { createClip, uploadClipFile, deleteClip } from './api.js'
@@ -14,10 +14,13 @@ const FILE_MAX_BYTES = 5 * 1024 * 1024
  * a copy-URL button, and the expiry. */
 export default function Clip() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const [params] = useSearchParams()
+  const replacePath = params.get('replace') || ''
+  const replacing = !!replacePath
 
-  const [path, setPath] = useState(() => params.get('path') || '')
+  const [path, setPath] = useState(() => replacePath || params.get('path') || '')
   const [content, setContent] = useState('')
   const [file, setFile] = useState(null)         // File to attach, or null
   const [err, setErr] = useState('')
@@ -34,7 +37,7 @@ export default function Clip() {
 
   // Guest → redirect to login.
   if (user !== null && !user.email) {
-    navigate('/login?next=/clip', { replace: true })
+    navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`, { replace: true })
     return null
   }
   if (user && user.email && !user.whitelisted) {
@@ -77,7 +80,7 @@ export default function Clip() {
     setCreated(null)
     setBusy(true)
     try {
-      const res = await createClip(path.trim().toLowerCase(), content, !!file)
+      const res = await createClip(path.trim().toLowerCase(), content, !!file, replacing)
       if (file) {
         try {
           res.file = await uploadClipFile(res.path, file)
@@ -96,7 +99,7 @@ export default function Clip() {
       }
       setCreated(res)
       setContent('')
-      setPath('')
+      if (!replacing) setPath('')
       setFile(null)
       if (fileInput.current) fileInput.current.value = ''
     } catch (e2) {
@@ -117,14 +120,19 @@ export default function Clip() {
   return (
     <Screen align="top" max="48rem">
       <Window title="aarg.dev / clip" tag="ephemeral · 24h">
-        <div className="px-6 pt-7 pb-4"><Prompt cmd="clip --new" cursor /></div>
+        <div className="px-6 pt-7 pb-4"><Prompt cmd={replacing ? `clip --replace ${replacePath}` : 'clip --new'} cursor /></div>
         <hr className="tui-sep" />
 
         <form onSubmit={submit} className="px-6 py-6 flex flex-col gap-4">
+          {replacing && (
+            <Notice kind="error">
+              the existing /{replacePath} clip stays live until you submit this replacement.
+            </Notice>
+          )}
           <Field
-            label="path (optional — blank = generated short code)"
+            label={replacing ? 'path (locked for replacement)' : 'path (optional — blank = generated short code)'}
             value={path} onChange={setPath} placeholder="e.g. notes"
-            onEnter={submit}
+            onEnter={submit} disabled={replacing}
           />
           <TextArea
             label={`content${file ? ' (optional — file attached)' : ''}`}
@@ -156,7 +164,13 @@ export default function Clip() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button onClick={submit} disabled={busy || (!content && !file)}>create clip</Button>
+            <Button
+              onClick={submit}
+              variant={replacing ? 'danger' : ''}
+              disabled={busy || (!content && !file)}
+            >
+              {replacing ? 'erase old clip and replace' : 'create clip'}
+            </Button>
             <span className="text-xs" style={{ color: 'var(--dim)' }}>expires in 24h</span>
           </div>
 
@@ -168,7 +182,7 @@ export default function Clip() {
             <hr className="tui-sep" />
             <div className="pt-4">
               <Notice kind="ok">
-                clip created{created.file ? ` with attachment ${created.file.name} (${fmtSize(created.file.size)})` : ''}
+                clip {created.replaced ? 'replaced' : 'created'}{created.file ? ` with attachment ${created.file.name} (${fmtSize(created.file.size)})` : ''}
                 {' '}— share the link, log in to read it from anywhere.
               </Notice>
               <Notice kind="error">{fileErr && `clip created, but the file didn't upload: ${fileErr}`}</Notice>

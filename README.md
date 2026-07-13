@@ -11,7 +11,8 @@ Personal website for [aarg.dev](https://aarg.dev). A minimal landing page with l
 
 ## Features
 
-- **Clip** — a cl1p.net-style paste utility at `/clip/<path>`: whitelisted logged-in
+- **Clip** — a cl1p.net-style paste utility at `/clip/<path>`, `/c/<path>`, or the
+  short root form `/<path>` (named site pages take precedence): whitelisted logged-in
   users create a clip (custom path or generated short code), text stored locally with a
   1-day TTL, viewable from any computer (after login) with a copy button. A clip can
   carry one file attachment (max 5 MB, stored in SQLite, downloadable from the clip

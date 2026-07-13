@@ -24,7 +24,11 @@ createRoot(document.getElementById('root')).render(
             <Route path="/login" element={<Login />} />
             <Route path="/clip" element={<Clip />} />
             <Route path="/clip/:path" element={<ClipView />} />
+            <Route path="/c/:path" element={<ClipView />} />
             <Route path="/admin" element={<Admin />} />
+            {/* Named pages above take precedence. Any other single-segment
+                path is treated as a clip id before giving up as missing. */}
+            <Route path="/:path" element={<ClipView />} />
           </Routes>
         </MetricsProvider>
       </AuthProvider>

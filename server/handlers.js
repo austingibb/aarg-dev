@@ -3,7 +3,7 @@
  * the shared `send` helper to respond. Auth gating is done by the router in
  * index.js; `ctx` is the per-request resolved capability (email/admin/whitelisted).
  */
-import { stmt } from './db.js'
+import { db, stmt } from './db.js'
 import {
   hashPassword, verifyPassword, dummyVerify,
   sessionCookie, clearCookie,
@@ -261,20 +261,45 @@ export function createClip({ res, body, ctx }) {
   if (buf.length > CLIP_MAX_BYTES) return send(res, 413, { error: 'content too large (200 KB max)' })
 
   let path = String(body.path || '').trim().toLowerCase()
+  const replacing = body.replace === true
   const now = Date.now()
   purgeExpired()
 
   if (path) {
     if (!CLIP_PATH_RE.test(path)) return send(res, 400, { error: 'invalid path' })
-    if (stmt.clipExists.get(path)) return send(res, 409, { error: 'path already in use' })
+    const existing = stmt.getLiveClip.get(path, now)
+    if (replacing) {
+      if (!existing) return send(res, 404, { error: 'clip to replace no longer exists' })
+      if (existing.created_by !== ctx.email && !ctx.admin) {
+        return send(res, 403, { error: 'unauthorized — this clip belongs to another user' })
+      }
+    } else if (existing || stmt.clipExists.get(path)) {
+      return send(res, 409, { error: 'path already in use' })
+    }
   } else {
+    if (replacing) return send(res, 400, { error: 'path required to replace a clip' })
     path = generatePath()
     if (!path) return send(res, 507, { error: 'could not allocate a short path, retry' })
   }
 
   const expiresAt = now + CLIP_TTL
-  stmt.insertClip.run(path, content, ctx.email || 'anonymous', now, expiresAt)
-  return send(res, 200, { path, url: `/clip/${path}`, expires_at: expiresAt })
+  if (replacing) {
+    // Delete (including any attachment via ON DELETE CASCADE) and insert the
+    // replacement atomically. Merely opening the replacement form does not
+    // touch the existing clip; this runs only on an explicit form submission.
+    db.exec('BEGIN IMMEDIATE')
+    try {
+      stmt.deleteClip.run(path)
+      stmt.insertClip.run(path, content, ctx.email || 'anonymous', now, expiresAt)
+      db.exec('COMMIT')
+    } catch (err) {
+      db.exec('ROLLBACK')
+      throw err
+    }
+  } else {
+    stmt.insertClip.run(path, content, ctx.email || 'anonymous', now, expiresAt)
+  }
+  return send(res, 200, { path, url: `/clip/${path}`, expires_at: expiresAt, replaced: replacing })
 }
 
 /* ---------------- market data proxy ----------------

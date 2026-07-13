@@ -4,14 +4,14 @@ import { Screen, Window, Prompt, Button, Notice } from './terminal.jsx'
 import { getClip, clipFileUrl } from './api.js'
 import { fmtSize } from './format.js'
 
-/* Read a clip by path. 401 → /login?next=/clip/<path>; 403 → not-whitelisted
- * notice; 404 → "no such clip (or it expired)" + a button to create a clip at
- * this path. Content in a read-only <pre> styled like tui-input; header with
- * path + expires-in; copy button; follow button when the content is a URL. */
+/* Read a clip by path. Visitors without access get a neutral route back home;
+ * 404 shows "no such clip (or it expired)" + a button to create a clip at this
+ * path. Content is rendered read-only with copy/download/follow controls. */
 export default function ClipView() {
   const { path } = useParams()
   const navigate = useNavigate()
-  const fromAdmin = useLocation().state?.from === 'admin'
+  const location = useLocation()
+  const fromAdmin = location.state?.from === 'admin'
   const [clip, setClip] = useState(null)
   const [err, setErr] = useState('')
   const [status, setStatus] = useState('loading') // loading | ok | login | denied | unauthorized | missing
@@ -41,6 +41,7 @@ export default function ClipView() {
   }
 
   const title = `aarg.dev / clip / ${path}`
+  const noAccess = status === 'login' || status === 'denied' || status === 'unauthorized'
 
   return (
     <Screen align="top" max="52rem">
@@ -54,23 +55,12 @@ export default function ClipView() {
           <div className="px-6 py-10"><p style={{ color: 'var(--dim)' }}>reading…</p></div>
         )}
 
-        {status === 'login' && (
+        {noAccess && (
           <div className="px-6 py-10 flex flex-col gap-4">
-            <Notice kind="error">login required to read clips.</Notice>
-            <Button onClick={() => navigate(`/login?next=/clip/${path}`)}>log in</Button>
-          </div>
-        )}
-
-        {status === 'denied' && (
-          <div className="px-6 py-10">
-            <Notice kind="error">your account is not whitelisted for clips.</Notice>
-            <p className="text-xs mt-3" style={{ color: 'var(--dim)' }}>ask the site admin to whitelist you.</p>
-          </div>
-        )}
-
-        {status === 'unauthorized' && (
-          <div className="px-6 py-10">
-            <Notice kind="error">unauthorized — this clip belongs to another user.</Notice>
+            <Notice kind="error">
+              whoops — you don't have permission to view this part of the website. you may have meant to view the main page: aarg.dev
+            </Notice>
+            <Button onClick={() => navigate('/')}>return to aarg.dev</Button>
           </div>
         )}
 
@@ -118,13 +108,19 @@ export default function ClipView() {
                   follow clip url ↗
                 </Button>
               )}
+              <Button
+                variant="danger"
+                onClick={() => navigate(`/clip?replace=${encodeURIComponent(clip.path)}`)}
+              >
+                replace this clip with new clip
+              </Button>
             </div>
           </div>
         )}
 
         <hr className="tui-sep" />
         <div className="px-6 py-3 tui-status">
-          {fromAdmin ? (
+          {!noAccess && (fromAdmin ? (
             <Link to="/admin" onClick={(e) => { e.preventDefault(); navigate('/admin', { state: { section: 'clips' } }) }} style={{ color: 'var(--red)' }}>
               ‹ admin console
             </Link>
@@ -132,9 +128,9 @@ export default function ClipView() {
             <Link to="/clip" onClick={(e) => { e.preventDefault(); navigate('/clip') }} style={{ color: 'var(--amber)' }}>
               ‹ new clip
             </Link>
-          )}
+          ))}
           <Link to="/" onClick={(e) => { e.preventDefault(); navigate('/') }} style={{ color: 'var(--dim)', marginLeft: 'auto' }}>
-            ../ home
+            {noAccess ? 'aarg.dev' : '../ home'}
           </Link>
         </div>
       </Window>

@@ -264,7 +264,7 @@ export function Clock() {
    ============================================================ */
 
 /** A labeled single-line input. */
-export function Field({ label, type = 'text', value, onChange, placeholder, autoFocus, onEnter, name, autoComplete }) {
+export function Field({ label, type = 'text', value, onChange, placeholder, autoFocus, onEnter, name, autoComplete, disabled }) {
   return (
     <label className="tui-field">
       {label && <span className="tui-field-label">{label}</span>}
@@ -276,6 +276,7 @@ export function Field({ label, type = 'text', value, onChange, placeholder, auto
         placeholder={placeholder}
         autoFocus={autoFocus}
         autoComplete={autoComplete}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter(e) }}
       />

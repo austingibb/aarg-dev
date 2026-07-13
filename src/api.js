@@ -47,8 +47,12 @@ export const adminListClips  = ()          => api('GET',  '/api/admin/clips')
 export const adminDeleteClip = (path)      => api('DELETE', `/api/admin/clips/${encodeURIComponent(path)}`)
 
 export const getClip       = (path)        => api('GET',  `/api/clip/${encodeURIComponent(path)}`)
-export const createClip    = (path, content, withFile = false) =>
-  api('POST', '/api/clip', { ...(path ? { path } : {}), content, ...(withFile ? { withFile: true } : {}) })
+export const createClip    = (path, content, withFile = false, replace = false) =>
+  api('POST', '/api/clip', {
+    ...(path ? { path } : {}), content,
+    ...(withFile ? { withFile: true } : {}),
+    ...(replace ? { replace: true } : {}),
+  })
 export const deleteClip    = (path)        => api('DELETE', `/api/clip/${encodeURIComponent(path)}`)
 
 /* Attach a File to a clip. Raw octet-stream body (not JSON — 5 MB of base64
