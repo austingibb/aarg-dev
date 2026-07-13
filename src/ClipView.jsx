@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { Screen, Window, Prompt, Button, Notice } from './terminal.jsx'
-import { getClip } from './api.js'
+import { getClip, clipFileUrl } from './api.js'
+import { fmtSize } from './format.js'
 
 /* Read a clip by path. 401 → /login?next=/clip/<path>; 403 → not-whitelisted
  * notice; 404 → "no such clip (or it expired)" + a button to create a clip at
@@ -89,11 +90,29 @@ export default function ClipView() {
               <span>·</span>
               <span>expires in {expiresIn(clip.expires_at)}</span>
             </div>
-            <pre className="tui-input" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto' }}>
+            {clip.content ? (
+              <pre className="tui-input" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto' }}>
 {clip.content}
-            </pre>
+              </pre>
+            ) : (
+              <p className="text-xs" style={{ color: 'var(--dim)' }}>(no text — file-only clip)</p>
+            )}
+            {clip.file && (
+              <div className="flex items-center gap-3 flex-wrap text-xs">
+                <span style={{ color: 'var(--dim)' }}>attachment:</span>
+                <span style={{ color: 'var(--fg)', wordBreak: 'break-all' }}>
+                  {clip.file.name} <span style={{ color: 'var(--dim)' }}>({fmtSize(clip.file.size)})</span>
+                </span>
+                {/* Plain same-origin navigation: cookie rides along, and the
+                    Content-Disposition: attachment response downloads without
+                    leaving the page. */}
+                <Button onClick={() => { window.location.href = clipFileUrl(clip.path) }}>
+                  ↓ download
+                </Button>
+              </div>
+            )}
             <div className="flex items-center gap-3 flex-wrap">
-              <Button onClick={copy}>{copied ? 'copied!' : 'copy content'}</Button>
+              {clip.content && <Button onClick={copy}>{copied ? 'copied!' : 'copy content'}</Button>}
               {clipUrl(clip.content) && (
                 <Button onClick={() => window.open(clipUrl(clip.content), '_blank', 'noopener,noreferrer')}>
                   follow clip url ↗

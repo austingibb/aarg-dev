@@ -14,7 +14,9 @@ import { randomInt } from 'node:crypto'
 
 const CLIP_TTL = (Number(process.env.CLIP_TTL_SECONDS) || 86400) * 1000
 const CLIP_MAX_BYTES = 200 * 1024
+export const FILE_MAX_BYTES = 5 * 1024 * 1024
 const CLIP_PATH_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
+const MIME_RE = /^[\w.+-]+\/[\w.+-]+$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function send(res, status, obj) {
@@ -173,15 +175,89 @@ export function getClip({ res, params, ctx }) {
   if (clip.created_by !== ctx.email && !ctx.admin) {
     return send(res, 403, { error: 'unauthorized — this clip belongs to another user' })
   }
+  const file = stmt.getClipFileMeta.get(path) || null
   return send(res, 200, {
     path: clip.path, content: clip.content, expires_at: clip.expires_at,
+    file: file ? { name: file.name, mime: file.mime, size: file.size } : null,
   })
+}
+
+/* Owner deletes their own clip (used to roll back creation when the file
+ * upload step fails). Idempotent: deleting a missing/expired clip is ok. */
+export function deleteOwnClip({ res, params, ctx }) {
+  const path = String(params.path || '')
+  if (!CLIP_PATH_RE.test(path)) return send(res, 400, { error: 'invalid path' })
+  const clip = stmt.getLiveClip.get(path, Date.now())
+  if (clip && clip.created_by !== ctx.email && !ctx.admin) {
+    return send(res, 403, { error: 'unauthorized — this clip belongs to another user' })
+  }
+  stmt.deleteClip.run(path)
+  return send(res, 200, { ok: true })
+}
+
+/* Attach a file to an existing clip (owner-only, one file per clip, 5 MB max).
+ * The body arrives as a raw Buffer (route is marked raw in index.js); the
+ * filename travels in the x-file-name header, encodeURIComponent-encoded. */
+export function uploadClipFile({ req, res, body, params, ctx }) {
+  const path = String(params.path || '')
+  if (!CLIP_PATH_RE.test(path)) return send(res, 404, { error: 'no such clip' })
+  purgeExpired()
+  const clip = stmt.getLiveClip.get(path, Date.now())
+  if (!clip) return send(res, 404, { error: 'no such clip (or it expired)' })
+  if (clip.created_by !== ctx.email) {
+    return send(res, 403, { error: 'unauthorized — this clip belongs to another user' })
+  }
+  if (stmt.getClipFileMeta.get(path)) {
+    return send(res, 409, { error: 'clip already has a file attached' })
+  }
+  if (!body || body.length === 0) return send(res, 400, { error: 'file required' })
+  if (body.length > FILE_MAX_BYTES) return send(res, 413, { error: 'file too large (5 MB max)' })
+
+  let name = 'file'
+  try { name = safeFileName(decodeURIComponent(req.headers['x-file-name'] || '')) }
+  catch { /* malformed encoding — keep the fallback name */ }
+  const rawMime = String(req.headers['x-file-mime'] || '')
+  const mime = MIME_RE.test(rawMime) ? rawMime.slice(0, 100) : 'application/octet-stream'
+
+  stmt.insertClipFile.run(path, name, mime, body.length, body)
+  return send(res, 200, { name, mime, size: body.length })
+}
+
+/* Download a clip's attached file. Same access rule as reading the clip
+ * (owner or admin). Always served as an octet-stream download — never the
+ * stored mime — so an uploaded .html can't execute on this origin. */
+export function downloadClipFile({ res, params, ctx }) {
+  const path = String(params.path || '')
+  if (!CLIP_PATH_RE.test(path)) return send(res, 404, { error: 'no such clip' })
+  purgeExpired()
+  const clip = stmt.getLiveClip.get(path, Date.now())
+  if (!clip) return send(res, 404, { error: 'no such clip (or it expired)' })
+  if (clip.created_by !== ctx.email && !ctx.admin) {
+    return send(res, 403, { error: 'unauthorized — this clip belongs to another user' })
+  }
+  const file = stmt.getClipFile.get(path)
+  if (!file) return send(res, 404, { error: 'no file attached to this clip' })
+
+  const data = Buffer.from(file.data)
+  const ascii = file.name.replace(/[^\x20-\x7e]/g, '_')
+  res.writeHead(200, {
+    'Content-Type': 'application/octet-stream',
+    'Content-Length': data.length,
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+  })
+  res.end(data)
 }
 
 export function createClip({ res, body, ctx }) {
   const content = String(body.content ?? '')
   const buf = Buffer.from(content, 'utf8')
-  if (buf.length === 0) return send(res, 400, { error: 'content required' })
+  // Text is optional when the client declares a file is coming (withFile) —
+  // the attachment arrives in a follow-up request, and the client rolls the
+  // clip back if that upload fails.
+  if (buf.length === 0 && body.withFile !== true) {
+    return send(res, 400, { error: 'content required (unless attaching a file)' })
+  }
   if (buf.length > CLIP_MAX_BYTES) return send(res, 413, { error: 'content too large (200 KB max)' })
 
   let path = String(body.path || '').trim().toLowerCase()
@@ -232,6 +308,15 @@ export async function marketSpx({ res }) {
 }
 
 /* ---- helpers ---- */
+/* Keep only the basename, drop control chars and header-breaking quotes,
+ * cap the length. Falls back to 'file' when nothing survives. */
+function safeFileName(name) {
+  const base = String(name || '').split(/[\\/]/).pop()
+    // eslint-disable-next-line no-control-regex -- stripping control chars is the point
+    .replace(/[\x00-\x1f\x7f"]/g, '').trim().slice(0, 120)
+  return base || 'file'
+}
+
 function generatePath() {
   const CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789'
   for (const len of [3, 4]) {

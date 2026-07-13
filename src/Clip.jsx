@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Screen, Window, Prompt, Field, TextArea, Button, Notice } from './terminal.jsx'
 import { useAuth } from './auth.js'
-import { createClip } from './api.js'
+import { createClip, uploadClipFile, deleteClip } from './api.js'
+import { fmtSize } from './format.js'
+
+const FILE_MAX_BYTES = 5 * 1024 * 1024
 
 /* Create a clip. Guards: not logged in → redirect /login?next=/clip;
  * not whitelisted → red notice. Custom path (blank = generated short url,
@@ -16,10 +19,13 @@ export default function Clip() {
 
   const [path, setPath] = useState(() => params.get('path') || '')
   const [content, setContent] = useState('')
+  const [file, setFile] = useState(null)         // File to attach, or null
   const [err, setErr] = useState('')
+  const [fileErr, setFileErr] = useState('')     // upload failed but clip exists
   const [busy, setBusy] = useState(false)
-  const [created, setCreated] = useState(null)   // { path, url, expires_at }
+  const [created, setCreated] = useState(null)   // { path, url, expires_at, file? }
   const [copied, setCopied] = useState(false)
+  const fileInput = useRef(null)
 
   if (user === null) {
     // still loading? user is null only before first /me resolves OR when guest.
@@ -51,17 +57,48 @@ export default function Clip() {
   }
   if (!user) return null // loading
 
+  function pickFile(f) {
+    setErr('')
+    if (!f) { setFile(null); return }
+    if (f.size > FILE_MAX_BYTES) {
+      setFile(null)
+      if (fileInput.current) fileInput.current.value = ''
+      setErr(`file too large (${fmtSize(f.size)}) — 5 MB max`)
+      return
+    }
+    setFile(f)
+  }
+
   async function submit(e) {
     e?.preventDefault()
     if (busy) return
     setErr('')
+    setFileErr('')
     setCreated(null)
     setBusy(true)
     try {
-      const res = await createClip(path.trim().toLowerCase(), content)
+      const res = await createClip(path.trim().toLowerCase(), content, !!file)
+      if (file) {
+        try {
+          res.file = await uploadClipFile(res.path, file)
+        } catch (e2) {
+          // Clip + attachment is all-or-nothing: roll the clip back and keep
+          // the form filled so the user can retry.
+          try {
+            await deleteClip(res.path)
+            setErr(`file upload failed — clip not created: ${e2?.error || 'error'}`)
+            return
+          } catch {
+            // rollback failed; the clip exists without its file — say so
+            setFileErr(e2?.error || 'file upload failed')
+          }
+        }
+      }
       setCreated(res)
       setContent('')
       setPath('')
+      setFile(null)
+      if (fileInput.current) fileInput.current.value = ''
     } catch (e2) {
       setErr(e2?.error || 'could not create clip')
     } finally {
@@ -90,12 +127,36 @@ export default function Clip() {
             onEnter={submit}
           />
           <TextArea
-            label="content" value={content} onChange={setContent}
+            label={`content${file ? ' (optional — file attached)' : ''}`}
+            value={content} onChange={setContent}
             rows={8} placeholder="paste anything… (max 200 KB)"
           />
 
+          <div className="tui-field">
+            <span className="tui-field-label">attachment (optional — max 5 MB)</span>
+            <input
+              ref={fileInput} type="file" className="hidden"
+              onChange={(e) => pickFile(e.target.files?.[0] || null)}
+            />
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button onClick={() => fileInput.current?.click()}>
+                {file ? 'change file' : 'attach file'}
+              </Button>
+              {file && (
+                <>
+                  <span className="text-xs" style={{ color: 'var(--fg)', wordBreak: 'break-all' }}>
+                    {file.name} <span style={{ color: 'var(--dim)' }}>({fmtSize(file.size)})</span>
+                  </span>
+                  <Button onClick={() => { setFile(null); if (fileInput.current) fileInput.current.value = '' }}>
+                    ✕ remove
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center gap-3">
-            <Button onClick={submit} disabled={busy || !content}>create clip</Button>
+            <Button onClick={submit} disabled={busy || (!content && !file)}>create clip</Button>
             <span className="text-xs" style={{ color: 'var(--dim)' }}>expires in 24h</span>
           </div>
 
@@ -106,7 +167,11 @@ export default function Clip() {
           <div className="px-6 pb-6 flex flex-col gap-3">
             <hr className="tui-sep" />
             <div className="pt-4">
-              <Notice kind="ok">clip created — share the link, log in to read it from anywhere.</Notice>
+              <Notice kind="ok">
+                clip created{created.file ? ` with attachment ${created.file.name} (${fmtSize(created.file.size)})` : ''}
+                {' '}— share the link, log in to read it from anywhere.
+              </Notice>
+              <Notice kind="error">{fileErr && `clip created, but the file didn't upload: ${fileErr}`}</Notice>
               <div className="mt-3 flex items-center gap-3 flex-wrap">
                 <Link
                   to={created.url}

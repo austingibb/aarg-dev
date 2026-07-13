@@ -13,8 +13,9 @@ Personal website for [aarg.dev](https://aarg.dev). A minimal landing page with l
 
 - **Clip** — a cl1p.net-style paste utility at `/clip/<path>`: whitelisted logged-in
   users create a clip (custom path or generated short code), text stored locally with a
-  1-day TTL, viewable from any computer (after login) with a copy button. Both read and
-  write require a whitelisted login.
+  1-day TTL, viewable from any computer (after login) with a copy button. A clip can
+  carry one file attachment (max 5 MB, stored in SQLite, downloadable from the clip
+  page, deleted with the clip). Both read and write require a whitelisted login.
 - **User login** — email + password self-serve signup. The whitelist (managed by admin)
   gates the clip feature; the amber `clip` menu item appears only for whitelisted users.
 - **Admin portal** — admin logs in with a PSK + TOTP code, then manages the whitelist

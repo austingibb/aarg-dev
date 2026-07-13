@@ -32,7 +32,10 @@ const ROUTES = [
   { method: 'GET',    re: /^\/api\/admin\/clips$/,                         handler: h.adminListClips,    auth: 'admin' },
   { method: 'DELETE', re: /^\/api\/admin\/clips\/(?<path>[^/]+)$/,         handler: h.adminDeleteClip,   auth: 'admin' },
   // clip
-  { method: 'GET',    re: /^\/api\/clip\/(?<path>[^/]+)$/,  handler: h.getClip,    auth: 'whitelisted' },
+  { method: 'GET',    re: /^\/api\/clip\/(?<path>[^/]+)\/file$/, handler: h.downloadClipFile, auth: 'whitelisted' },
+  { method: 'POST',   re: /^\/api\/clip\/(?<path>[^/]+)\/file$/, handler: h.uploadClipFile,   auth: 'whitelisted', raw: true },
+  { method: 'GET',    re: /^\/api\/clip\/(?<path>[^/]+)$/,  handler: h.getClip,       auth: 'whitelisted' },
+  { method: 'DELETE', re: /^\/api\/clip\/(?<path>[^/]+)$/,  handler: h.deleteOwnClip, auth: 'whitelisted' },
   { method: 'POST',   re: /^\/api\/clip$/,                    handler: h.createClip, auth: 'whitelisted' },
   // market data (proxied + cached server-side; stock APIs are CORS-blocked in browsers)
   { method: 'GET',    re: /^\/api\/market\/spx$/,             handler: h.marketSpx,  auth: 'public' },
@@ -84,6 +87,37 @@ function readJsonBody(req) {
   })
 }
 
+/* Raw-body reader for file uploads (routes marked raw: true). Requires
+ * application/octet-stream — like the JSON rule, a non-simple content type
+ * forces a CORS preflight, which is the CSRF backstop. Resolves the body
+ * as a Buffer. */
+function readRawBody(req, maxBytes) {
+  return new Promise((resolve) => {
+    const ct = (req.headers['content-type'] || '').toLowerCase()
+    if (!ct.includes('application/octet-stream')) {
+      resolve({ error: 415 })
+      return
+    }
+    const chunks = []
+    let size = 0
+    let aborted = false
+    req.on('data', (c) => {
+      size += c.length
+      if (size > maxBytes) {
+        if (!aborted) { aborted = true; resolve({ error: 413 }) }
+        req.destroy()
+        return
+      }
+      chunks.push(c)
+    })
+    req.on('end', () => {
+      if (aborted) return
+      resolve({ body: Buffer.concat(chunks) })
+    })
+    req.on('error', () => resolve({ error: 400 }))
+  })
+}
+
 function authorize(auth, session, ctx) {
   switch (auth) {
     case 'public': return null
@@ -121,8 +155,16 @@ const server = createServer(async (req, res) => {
   const denied = authorize(route.auth, session, ctx)
   if (denied) return send(res, denied, { error: denied === 401 ? 'not authenticated' : 'forbidden' })
 
-  const { body, error } = await readJsonBody(req)
-  if (error) return send(res, error, { error: error === 413 ? 'request too large' : error === 415 ? 'content-type must be application/json' : 'bad request' })
+  const { body, error } = route.raw
+    ? await readRawBody(req, h.FILE_MAX_BYTES)
+    : await readJsonBody(req)
+  if (error) {
+    return send(res, error, {
+      error: error === 413 ? (route.raw ? 'file too large (5 MB max)' : 'request too large')
+        : error === 415 ? `content-type must be ${route.raw ? 'application/octet-stream' : 'application/json'}`
+        : 'bad request',
+    })
+  }
 
   try {
     await route.handler({ req, res, body, params, session, ctx, ip: getClientIp(req) })

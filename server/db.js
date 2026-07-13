@@ -31,6 +31,13 @@ CREATE TABLE IF NOT EXISTS clips (
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS clip_files (
+  clip_path  TEXT PRIMARY KEY REFERENCES clips(path) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  mime       TEXT NOT NULL,
+  size       INTEGER NOT NULL,
+  data       BLOB NOT NULL
+);
 `)
 
 /* ---- prepared-statement wrappers ---- */
@@ -47,4 +54,7 @@ export const stmt = {
   deleteClip:     db.prepare('DELETE FROM clips WHERE path = ?'),
   purgeExpired:   db.prepare('DELETE FROM clips WHERE expires_at <= ?'),
   clipExists:     db.prepare('SELECT 1 FROM clips WHERE path = ?'),
+  insertClipFile: db.prepare('INSERT INTO clip_files (clip_path, name, mime, size, data) VALUES (?, ?, ?, ?, ?)'),
+  getClipFileMeta:db.prepare('SELECT name, mime, size FROM clip_files WHERE clip_path = ?'),
+  getClipFile:    db.prepare('SELECT name, mime, size, data FROM clip_files WHERE clip_path = ?'),
 }

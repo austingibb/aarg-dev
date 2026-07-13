@@ -18,6 +18,10 @@ export async function api(method, path, body) {
   } catch {
     throw { status: 0, error: 'network error' }
   }
+  return parseResponse(res)
+}
+
+async function parseResponse(res) {
   let data = null
   const text = await res.text()
   if (text) {
@@ -43,4 +47,29 @@ export const adminListClips  = ()          => api('GET',  '/api/admin/clips')
 export const adminDeleteClip = (path)      => api('DELETE', `/api/admin/clips/${encodeURIComponent(path)}`)
 
 export const getClip       = (path)        => api('GET',  `/api/clip/${encodeURIComponent(path)}`)
-export const createClip    = (path, content) => api('POST', '/api/clip', path ? { path, content } : { content })
+export const createClip    = (path, content, withFile = false) =>
+  api('POST', '/api/clip', { ...(path ? { path } : {}), content, ...(withFile ? { withFile: true } : {}) })
+export const deleteClip    = (path)        => api('DELETE', `/api/clip/${encodeURIComponent(path)}`)
+
+/* Attach a File to a clip. Raw octet-stream body (not JSON — 5 MB of base64
+ * would blow past the JSON body cap); filename rides in a header. */
+export async function uploadClipFile(path, file) {
+  let res
+  try {
+    res = await fetch(`/api/clip/${encodeURIComponent(path)}/file`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-File-Name': encodeURIComponent(file.name || 'file'),
+        'X-File-Mime': file.type || 'application/octet-stream',
+      },
+      body: file,
+    })
+  } catch {
+    throw { status: 0, error: 'network error' }
+  }
+  return parseResponse(res)
+}
+
+export const clipFileUrl = (path) => `/api/clip/${encodeURIComponent(path)}/file`
