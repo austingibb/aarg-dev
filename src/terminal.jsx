@@ -34,14 +34,23 @@ export function Window({ title, tag, children, boot = true, className = '' }) {
 }
 
 /** A shell-prompt line:  austin@aarg.dev:~$ command */
-export function Prompt({ cmd, cursor = false, path = '~' }) {
+export function Prompt({ cmd, cursor = false, path = '~', onCommandClick }) {
   return (
     <div className="leading-relaxed">
       <span className="prompt-sign">austin@aarg.dev</span>
       <span style={{ color: 'var(--dim)' }}>:</span>
       <span className="prompt-path">{path}</span>
       <span style={{ color: 'var(--dim)' }}>$ </span>
-      {cmd && <span className="prompt-cmd">{cmd}</span>}
+      {cmd && (onCommandClick ? (
+        <button
+          type="button"
+          className="prompt-cmd is-clickable"
+          onClick={onCommandClick}
+          aria-label={`${cmd} — open command prompt`}
+        >
+          {cmd}
+        </button>
+      ) : <span className="prompt-cmd">{cmd}</span>)}
       {cursor && <span className="cursor" aria-hidden="true" />}
     </div>
   )

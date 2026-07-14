@@ -41,6 +41,8 @@ const BOOT_LOG = [
 ]
 
 const OUT_COLOR = { dim: 'var(--dim)', red: 'var(--red)', green: 'var(--green)', fg: 'var(--fg)' }
+const LINKS_COMMANDS = new Set(['./links.sh', '.\\links.sh', 'links.sh', 'links', 'sh links.sh', 'bash links.sh'])
+const isLinksCommand = (command) => LINKS_COMMANDS.has(command.trim())
 
 function ArrowGlyph() {
   return <span className="arrow" aria-hidden="true">↵</span>
@@ -248,7 +250,7 @@ export default function App() {
       return
     }
     if (c === 'ls' || c === 'ls -la' || c === 'ls -l') { push({ kind: 'ls' }); return }
-    if (c === './links.sh' || c === 'links.sh' || c === 'links' || c === 'sh links.sh' || c === 'bash links.sh') {
+    if (isLinksCommand(c)) {
       push({ kind: 'links' })
       setMode('links')
       return
@@ -319,7 +321,15 @@ export default function App() {
       <div key={key} className="term-out -mx-2">
         <div className="px-2 pb-1.5">
           <p className="text-xs uppercase" style={{ color: 'var(--amber)', letterSpacing: '0.16em' }}>
-            links.sh <span style={{ color: 'var(--dim)', textTransform: 'none', letterSpacing: 0 }}>— site navigator</span>
+            <button
+              type="button"
+              className="links-program-title"
+              onClick={mode === 'links' ? escToShell : undefined}
+              disabled={mode !== 'links'}
+            >
+              links.sh
+            </button>{' '}
+            <span style={{ color: 'var(--dim)', textTransform: 'none', letterSpacing: 0 }}>— site navigator</span>
           </p>
         </div>
         <nav aria-label="Site navigation">
@@ -375,7 +385,17 @@ export default function App() {
             onClick={() => { if (mode === 'shell' && window.getSelection()?.isCollapsed) inputRef.current?.focus() }}
           >
             {lines.map((l, i) => {
-              if (l.kind === 'cmd') return <Prompt key={i} cmd={l.text} cursor={!!l.live} />
+              if (l.kind === 'cmd') {
+                const linksCommand = mode === 'links' && !l.live && isLinksCommand(l.text)
+                return (
+                  <Prompt
+                    key={i}
+                    cmd={l.text}
+                    cursor={!!l.live}
+                    onCommandClick={linksCommand ? escToShell : undefined}
+                  />
+                )
+              }
               if (l.kind === 'text') {
                 return (
                   <div key={i} className="term-out text-sm" style={{ color: OUT_COLOR[l.color] || 'var(--fg)', whiteSpace: 'pre-wrap' }}>

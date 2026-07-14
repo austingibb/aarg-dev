@@ -131,6 +131,27 @@ body::before {
 .prompt-sign { color: var(--green); }
 .prompt-path { color: var(--cyan); }
 .prompt-cmd  { color: var(--fg-strong); }
+.prompt-cmd.is-clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--dim);
+  text-underline-offset: 0.2em;
+}
+.prompt-cmd.is-clickable:hover,
+.prompt-cmd.is-clickable:focus-visible {
+  color: var(--amber);
+  outline: none;
+}
+.links-program-title:not(:disabled) {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.links-program-title:not(:disabled):hover,
+.links-program-title:not(:disabled):focus-visible {
+  color: var(--fg-strong);
+  outline: none;
+}
 
 .cursor {
   display: inline-block;
