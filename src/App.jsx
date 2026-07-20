@@ -77,7 +77,29 @@ function LsBlock() {
     <div className="term-out flex flex-wrap" style={{ gap: '1.8rem', fontSize: '0.9rem' }}>
       <span style={{ color: 'var(--fg)' }}>about.txt</span>
       <span style={{ color: 'var(--green)' }}>admin-login.sh*</span>
+      <span style={{ color: 'var(--cyan)' }}>fsociety00.dat</span>
       <span style={{ color: 'var(--green)' }}>links.sh*</span>
+      <span style={{ color: 'var(--fg)' }}>readme.txt</span>
+    </div>
+  )
+}
+
+/* readme.txt — the note Elliot leaves on the encrypted archive
+ * (Mr. Robot, "eps1.0_hellofriend.mov"). Rendered as the show frames it:
+ * a ruled header, the line alone in the middle, a ruled footer. */
+function ReadmeBlock() {
+  return (
+    <div className="term-out" style={{ fontSize: '0.9rem', lineHeight: 1.7 }}>
+      <div style={{ color: 'var(--dim)' }}>---------- readme.txt ------------</div>
+      <div
+        style={{
+          color: 'var(--amber)', letterSpacing: '0.22em',
+          padding: '0.9rem 0 0.9rem 2.2rem',
+        }}
+      >
+        LEAVE ME HERE
+      </div>
+      <div style={{ color: 'var(--dim)' }}>_________________________________</div>
     </div>
   )
 }
@@ -239,6 +261,19 @@ export default function App() {
     }
     if (c === 'whoami') { push({ kind: 'whoami' }); return }
     if (c === 'cat about.txt' || c === 'cat about') { push({ kind: 'about' }); return }
+    // `more` is how the note gets read in the show — same reader here
+    const readMatch = /^(?:cat|more|less)\s+(.+)$/.exec(c)
+    if (readMatch) {
+      const f = readMatch[1].trim().replace(/^\.\//, '')
+      if (f === 'readme.txt' || f === 'readme') { push({ kind: 'readme' }); return }
+      if (f === 'fsociety00.dat') {
+        flushOut([
+          { kind: 'text', text: 'cat: fsociety00.dat: binary file (aes-256, key not on this machine)', color: 'red' },
+          { kind: 'text', text: 'there is a readme.', color: 'dim' },
+        ])
+        return
+      }
+    }
     if (c.startsWith('cat ')) {
       const f = c.slice(4).trim()
       push({
@@ -268,6 +303,16 @@ export default function App() {
     if (c === 'exit') { push({ kind: 'text', text: 'there is no escape. (well, there is — it relaunches links.sh)', color: 'dim' }); return }
     if (c.startsWith('sudo')) {
       push({ kind: 'text', text: 'austin is not in the sudoers file. this incident will be reported.', color: 'red' })
+      return
+    }
+    // deleting the archive is the one thing the note asks you not to do
+    if (/^rm\b/.test(c)) {
+      const target = c.replace(/^rm\b\s*(-\S+\s*)*/, '').trim().replace(/^\.\//, '')
+      if (target === 'fsociety00.dat' || target === 'readme.txt') {
+        push({ kind: 'text', text: `rm: cannot remove '${target}': it asked nicely`, color: 'red' })
+        return
+      }
+      push({ kind: 'text', text: `rm: cannot remove '${target || '...'}': read-only file system`, color: 'red' })
       return
     }
     push({ kind: 'text', text: `command not found: ${c} — try help`, color: 'red' })
@@ -406,6 +451,7 @@ export default function App() {
               if (l.kind === 'whoami') return <WhoamiBlock key={i} />
               if (l.kind === 'about') return <AboutBlock key={i} />
               if (l.kind === 'ls') return <LsBlock key={i} />
+              if (l.kind === 'readme') return <ReadmeBlock key={i} />
               if (l.kind === 'links') return renderLinksProgram(i)
               return null
             })}
