@@ -58,9 +58,17 @@ export default function LlmsHeavyLifting() {
           guardrail until AI-assisted workflows feel natural. It keeps you honest.
         </li>
         <li>
-          <strong>You are the architect.</strong> Know your design before you open a chat window.
-          Class diagrams, sequence charts, Mermaid diagrams, whatever gets the idea out of your
-          head and onto paper. A current reasoning model is surprisingly good at this part.
+          <strong>You are the architect.</strong> Have a backbone and lead the design. Know the
+          trade-offs you&apos;re making and why. You&apos;re ultimately responsible for the
+          architecture, so you should know it well enough to defend it. The mid- and small-level
+          implementation details, and the back-and-forth about how a piece should be designed,
+          are what LLMs are for.
+        </li>
+        <li>
+          <strong>Get the design out of your head.</strong> Class diagrams, sequence charts,
+          Mermaid, whatever gets it onto paper where you can look at it. A current reasoning model
+          is surprisingly good at this part, so use it to draft and pressure-test the diagram.
+          Just make sure the design being drawn is yours.
         </li>
         <li>
           <strong>Don&apos;t start with code.</strong> AI will generate something that looks
