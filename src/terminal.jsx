@@ -63,8 +63,17 @@ export function Prompt({ cmd, cursor = false, path = '~', onCommandClick }) {
 const BLOCKS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
 
 export function Spark({ values, color = '', width = 14 }) {
+  // The cell is the row's shock absorber on narrow screens (flexShrink 999,
+  // vs 1 on the label): glyphs are right-aligned inside a clipping flex box,
+  // so when space runs out the OLDEST bars crop off the left — the right end
+  // is the live data, and losing it is the worst possible crop.
+  const cell = { display: 'flex', justifyContent: 'flex-end', minWidth: 0, flexShrink: 999 }
   if (!values || values.length === 0) {
-    return <span className={`spark ${color}`} style={{ opacity: 0.4 }}>{'·'.repeat(width)}</span>
+    return (
+      <span className={`spark ${color}`} style={{ ...cell, opacity: 0.4 }}>
+        <span style={{ flexShrink: 0 }}>{'·'.repeat(width)}</span>
+      </span>
+    )
   }
   const v = values.slice(-width)
   const min = Math.min(...v)
@@ -73,11 +82,11 @@ export function Spark({ values, color = '', width = 14 }) {
   const glyphs = v.map((x) => BLOCKS[Math.round(((x - min) / span) * 7)]).join('')
   const pad = width - v.length
   return (
-    // flexShrink 0: never let a tight flex row shrink+clip the newest bars
-    // (the right end is the live data — losing it is the worst possible crop)
-    <span className={`spark ${color}`} style={{ flexShrink: 0 }}>
-      {pad > 0 && <span style={{ opacity: 0.4 }}>{'·'.repeat(pad)}</span>}
-      {glyphs}
+    <span className={`spark ${color}`} style={cell}>
+      <span style={{ flexShrink: 0 }}>
+        {pad > 0 && <span style={{ opacity: 0.4 }}>{'·'.repeat(pad)}</span>}
+        {glyphs}
+      </span>
     </span>
   )
 }
@@ -177,7 +186,16 @@ function Tail({ span, kind, value }) {
 function MetricRow({ label, color, values, value, span, kind }) {
   return (
     <div className="flex items-center text-xs" style={{ gap: '0.8rem' }}>
-      <span style={{ color: 'var(--dim)', width: LABEL_W, flexShrink: 0 }}>{label}</span>
+      {/* flexShrink 1 (vs the spark cell's 999): the spark absorbs nearly all
+          of a narrow squeeze; the label only ellipsizes as a last resort */}
+      <span
+        style={{
+          color: 'var(--dim)', width: LABEL_W, flexShrink: 1, minWidth: '4.5em',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}
+      >
+        {label}
+      </span>
       <Spark values={values} color={color} width={SPARK_W} />
       <Tail span={span} kind={kind} value={value} />
     </div>

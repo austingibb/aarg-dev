@@ -470,10 +470,11 @@ export default function App() {
           </div>
 
           {/* telemetry column — always on, independent of the shell */}
-          {/* 26rem: metric rows need ~353px + padding; narrower silently clips
-              the right end of the sparklines (the live bar) via overflow:hidden */}
+          {/* 26rem: full metric rows need ~353px + padding; below that the
+              spark cells shrink (cropping their oldest bars) so the value
+              column never spills past the frame on narrow phones */}
           <aside
-            className="w-full md:w-[26rem] shrink-0 px-6 py-6 border-t md:border-t-0 md:border-l"
+            className="w-full md:w-[26rem] shrink-0 px-4 sm:px-6 py-6 border-t md:border-t-0 md:border-l"
             style={{ borderColor: 'var(--border)' }}
           >
             <Activity metrics={metrics} />
