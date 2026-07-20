@@ -307,6 +307,15 @@ export function Activity({ metrics }) {
             />
           </div>
           <PriceChart values={swdev?.series} color="amber" floor={50} tick={50} unit="" xTicks={swdevYears} />
+          {/* Hiring Lab publishes this data freely on the condition that
+              Indeed is cited as the source. */}
+          <p className="chart-src">
+            {'// '}
+            <a href="https://data.indeed.com/#/postings" target="_blank" rel="noopener noreferrer">
+              indeed hiring lab
+            </a>
+            {' · feb 2020 = 100'}
+          </p>
         </div>
       </section>
     </div>
