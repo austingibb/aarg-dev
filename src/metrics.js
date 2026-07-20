@@ -183,6 +183,24 @@ export async function fetchSp500() {
   }
 }
 
+/* ------------------------------------------------------------------
+ * SWE JOB POSTINGS — Indeed Hiring Lab's US Software Development
+ * postings index (Feb 1 2020 = 100), mirrored keylessly on FRED and
+ * proxied at /api/market/swdev (12 h server cache; upstream updates
+ * weekly). Series is one point per month since Feb 2020.
+ * ------------------------------------------------------------------ */
+export async function fetchSwdev() {
+  try {
+    const r = await fetch('/api/market/swdev')
+    if (!r.ok) return null
+    const j = await r.json()
+    if (!Array.isArray(j.series) || j.series.length === 0) return null
+    return { index: j.index, series: j.series, date: j.date }
+  } catch {
+    return null
+  }
+}
+
 /* ==================================================================
  * HOOKS
  * ================================================================== */
@@ -215,6 +233,7 @@ export function useMetrics() {
   const [tpsSeries, setTpsSeries] = useState([])
   const [ethPrice, setEthPrice] = useState(null)
   const [sp500, setSp500] = useState(null)
+  const [swdev, setSwdev] = useState(null)
   const [fps, setFps] = useState(null)
 
   // status (drink log + active): now, then every 2 min
@@ -288,6 +307,14 @@ export function useMetrics() {
     return () => { alive = false; clearInterval(id) }
   }, [])
 
+  // swe job postings: once per mount — the series updates weekly, so
+  // there is nothing to poll within a tab session
+  useEffect(() => {
+    let alive = true
+    fetchSwdev().then((p) => { if (alive && p) setSwdev(p) })
+    return () => { alive = false }
+  }, [])
+
   // viewer's own render framerate
   useEffect(() => {
     if (prefersReduced()) return
@@ -314,6 +341,7 @@ export function useMetrics() {
     },
     ethPrice, // { price, series, floor } | null
     sp500,    // { price, series, floor } | null
+    swdev,    // { index, series, date } | null
     fps,
     active,
   }

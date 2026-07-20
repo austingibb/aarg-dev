@@ -332,6 +332,44 @@ export async function marketSpx({ res }) {
   }
 }
 
+/* Indeed Hiring Lab's US Software Development job postings index
+ * (seasonally adjusted, 7-day trailing avg, Feb 1 2020 = 100). The
+ * official Hiring Lab API is partner-key-only, but FRED mirrors the
+ * series keylessly as IHLIDXUSTPSOFTDEVE. Upstream updates weekly, so
+ * the cache is long. Daily rows are downsampled to one value per
+ * month (the month's last observation), ending at the latest day. */
+const SWDEV_URL = 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=IHLIDXUSTPSOFTDEVE'
+const SWDEV_TTL = 12 * 60 * 60 * 1000
+let swdevCache = { at: 0, data: null }
+
+export async function marketSwdev({ res }) {
+  const now = Date.now()
+  if (swdevCache.data && now - swdevCache.at < SWDEV_TTL) return send(res, 200, swdevCache.data)
+  try {
+    const r = await fetch(SWDEV_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (aarg.dev telemetry)' } })
+    if (!r.ok) throw new Error(`upstream ${r.status}`)
+    const text = await r.text()
+    // rows: "YYYY-MM-DD,74.56" (chronological; FRED marks gaps as '.')
+    const byMonth = new Map() // 'YYYY-MM' -> that month's latest value
+    let lastDate = null
+    for (const line of text.split('\n').slice(1)) {
+      const [date, valStr] = line.trim().split(',')
+      const val = Number(valStr)
+      if (!date || !Number.isFinite(val)) continue
+      byMonth.set(date.slice(0, 7), Math.round(val * 10) / 10)
+      lastDate = date
+    }
+    if (byMonth.size === 0) throw new Error('no data')
+    const series = [...byMonth.values()]
+    swdevCache = { at: now, data: { index: series[series.length - 1], date: lastDate, series } }
+    return send(res, 200, swdevCache.data)
+  } catch (err) {
+    console.error('[swdev]', err.message || err)
+    if (swdevCache.data) return send(res, 200, swdevCache.data) // stale beats nothing
+    return send(res, 502, { error: 'jobs data unavailable' })
+  }
+}
+
 /* ---- helpers ---- */
 /* Keep only the basename, drop control chars and header-breaking quotes,
  * cap the length. Falls back to 'file' when nothing survives. */

@@ -95,8 +95,9 @@ export function Spark({ values, color = '', width = 14 }) {
  * (e.g. 0.6 * yesterday's average) to crop the dead bottom of the range
  * without hugging the min. If price dips below the floor, the baseline
  * recalcs just under the low so bars never clip. Horizontal gridlines
- * mark every `tick` dollars, and the baseline value is printed below. */
-export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 0, tick = 250 }) {
+ * mark every `tick` units, and the baseline value is printed below
+ * (prefixed with `unit` — '$' for prices, '' for unitless indexes). */
+export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 0, tick = 250, unit = '$' }) {
   const v = Array.isArray(values) ? values : []
   if (v.length === 0) {
     return <div style={{ height, opacity: 0.4, color: 'var(--dim)' }} className="text-xs">no data</div>
@@ -118,7 +119,9 @@ export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 
     <div>
       <div style={{ position: 'relative', height, borderBottom: '1px solid var(--border-lit)' }}>
         {/* bars */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
+        {/* long series (years of monthly bars) drop to a 1px gap so the
+            bars themselves keep most of the width on narrow screens */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', gap: v.length > 40 ? '1px' : '2px' }}>
           {v.map((x, i) => (
             <div
               key={i}
@@ -147,7 +150,7 @@ export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 
       </div>
       {/* baseline value — the only labeled level */}
       <div style={{ fontSize: '0.55rem', color: 'var(--dim)', opacity: 0.85, marginTop: '2px' }}>
-        ${lo.toLocaleString()}
+        {unit}{lo.toLocaleString()}
       </div>
     </div>
   )
@@ -223,7 +226,7 @@ function SectionLabel({ title, note }) {
  *   for fun graphs — external live data, purely for vibes (eth)
  * ----------------------------------------------------------------- */
 export function Activity({ metrics }) {
-  const { caffeine, commits, eth, ethPrice, sp500 } = metrics
+  const { caffeine, commits, eth, ethPrice, sp500, swdev } = metrics
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2.5">
@@ -257,6 +260,24 @@ export function Activity({ metrics }) {
             <Tail span="2w" kind="now" value={sp500 ? `$${Math.round(sp500.price).toLocaleString()}` : '···'} />
           </div>
           <PriceChart values={sp500?.series} color="green" floor={sp500?.floor} />
+        </div>
+        {/* Indeed Hiring Lab US software-dev postings index, Feb 2020 = 100.
+            Monthly bars over the whole run — the boom-and-bust arc is the
+            point, not the last two weeks. */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center text-xs" style={{ gap: '0.8rem' }}>
+            <span
+              style={{ color: 'var(--dim)', width: LABEL_W, flexShrink: 0 }}
+              title="Indeed Hiring Lab: US software development job postings index, Feb 1 2020 = 100 (via FRED)"
+            >
+              swe job postings
+            </span>
+            <Tail
+              span={`${new Date().getFullYear() - 2020}y`} kind="now"
+              value={swdev ? swdev.index.toFixed(1) : '···'}
+            />
+          </div>
+          <PriceChart values={swdev?.series} color="amber" floor={50} tick={50} unit="" />
         </div>
       </section>
     </div>
