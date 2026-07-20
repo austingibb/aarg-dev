@@ -96,8 +96,10 @@ export function Spark({ values, color = '', width = 14 }) {
  * without hugging the min. If price dips below the floor, the baseline
  * recalcs just under the low so bars never clip. Horizontal gridlines
  * mark every `tick` units, and the baseline value is printed below
- * (prefixed with `unit` — '$' for prices, '' for unitless indexes). */
-export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 0, tick = 250, unit = '$' }) {
+ * (prefixed with `unit` — '$' for prices, '' for unitless indexes).
+ * `xTicks` ([{ i, label }]) draws a tick on the baseline at bar i's left
+ * edge with the label beneath — for year marks on multi-year series. */
+export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 0, tick = 250, unit = '$', xTicks }) {
   const v = Array.isArray(values) ? values : []
   if (v.length === 0) {
     return <div style={{ height, opacity: 0.4, color: 'var(--dim)' }} className="text-xs">no data</div>
@@ -135,6 +137,17 @@ export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 
             />
           ))}
         </div>
+        {/* x-axis ticks straddling the baseline */}
+        {(xTicks || []).map(({ i }) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute', bottom: '-3px', width: '1px', height: '6px',
+              left: `${(i / v.length) * 100}%`,
+              background: 'var(--border-lit)', pointerEvents: 'none',
+            }}
+          />
+        ))}
         {/* dotted $tick gridlines across the chart */}
         {lines.map((t) => (
           <div
@@ -148,9 +161,18 @@ export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 
           />
         ))}
       </div>
-      {/* baseline value — the only labeled level */}
-      <div style={{ fontSize: '0.55rem', color: 'var(--dim)', opacity: 0.85, marginTop: '2px' }}>
+      {/* baseline value at the left — the only labeled level — plus any
+          x-axis labels centered under their ticks */}
+      <div style={{ position: 'relative', fontSize: '0.55rem', color: 'var(--dim)', opacity: 0.85, marginTop: '2px' }}>
         {unit}{lo.toLocaleString()}
+        {(xTicks || []).map(({ i, label }) => (
+          <span
+            key={i}
+            style={{ position: 'absolute', top: 0, left: `${(i / v.length) * 100}%`, transform: 'translateX(-50%)' }}
+          >
+            {label}
+          </span>
+        ))}
       </div>
     </div>
   )
@@ -227,6 +249,13 @@ function SectionLabel({ title, note }) {
  * ----------------------------------------------------------------- */
 export function Activity({ metrics }) {
   const { caffeine, commits, eth, ethPrice, sp500, swdev } = metrics
+  // year boundaries for the swdev x-axis: series is one bar per month from
+  // Feb 2020, so each January sits at index (year - 2020) * 12 - 1
+  const swdevYears = swdev
+    ? Array.from({ length: new Date().getFullYear() - 2020 }, (_, k) => 2021 + k)
+        .map((y) => ({ i: (y - 2020) * 12 - 1, label: String(y) }))
+        .filter((t) => t.i < swdev.series.length)
+    : []
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2.5">
@@ -277,7 +306,7 @@ export function Activity({ metrics }) {
               value={swdev ? swdev.index.toFixed(1) : '···'}
             />
           </div>
-          <PriceChart values={swdev?.series} color="amber" floor={50} tick={50} unit="" />
+          <PriceChart values={swdev?.series} color="amber" floor={50} tick={50} unit="" xTicks={swdevYears} />
         </div>
       </section>
     </div>
