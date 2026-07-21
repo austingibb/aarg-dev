@@ -20,7 +20,7 @@ const LINKS = [
   { label: 'cavewise',  hint: 'a game on itch.io',      href: 'https://austingibb.itch.io/cavewise' },
   { label: 'paste-book', hint: 'youtube → ebook',       href: 'https://paste-book.com' },
   { label: 'github',    hint: 'source & experiments',   href: 'https://github.com/austingibb' },
-  { label: 'linkedin',  hint: 'the professional mask',  href: 'https://linkedin.com/in/austingibb' },
+  { label: 'linkedin',  hint: 'professional profile',   href: 'https://linkedin.com/in/austingibb' },
   { label: 'portfolio', hint: 'austingibb.com',         href: 'https://austingibb.com' },
 ]
 
