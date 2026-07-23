@@ -370,14 +370,14 @@ const CONTINENTS = [
   [15, 52, 20, 12],     // europe
   [-3, 54, 5, 7],       // british isles
   [18, 3, 20, 32],      // africa
-  [90, 50, 55, 28],     // asia (north / central)
+  [86, 50, 50, 28],     // asia (north / central) — pulled west to leave a sea gap off japan
   [50, 28, 18, 14],     // middle east
   [78, 22, 12, 15],     // india
   [110, 5, 20, 12],     // se asia / indonesia
   [115, 18, 11, 12],    // south china coast / indochina / philippines
   [132, -26, 20, 13],   // australia
   [147, -31, 9, 9],     // eastern australia
-  [138, 38, 6, 11],     // japan
+  [139.7, 35, 4, 5],    // japan — a small offshore island, not fused to the mainland
 ]
 
 const projectCol = (lon) => Math.round(((lon + 180) / 360) * (MAP_W - 1))
