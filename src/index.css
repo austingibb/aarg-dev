@@ -219,6 +219,54 @@ body::before {
 .spark.amber { color: var(--amber); }
 .spark.cyan  { color: var(--cyan); }
 
+/* ---- timezones.sh world clock ---------------------------- */
+
+.tz-wrap { margin-top: 0.2rem; }
+.tz-map {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 0.55rem 0 0;
+  padding-bottom: 0.2rem;
+  user-select: none;
+}
+.tz-map .o { color: rgba(95, 179, 201, 0.14); }   /* ocean */
+.tz-map .l { color: rgba(111, 207, 127, 0.22); }  /* land interior */
+.tz-map .c { color: rgba(111, 207, 127, 0.5); }   /* coastline */
+.tz-map .m {                                        /* city marker */
+  color: var(--amber);
+  font-weight: 700;
+  text-shadow: 0 0 6px var(--amber-glow);
+}
+
+.tz-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 0.2rem 1.1rem;
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+}
+.tz-city { display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+.tz-city .n {
+  color: var(--amber);
+  font-weight: 700;
+  width: 1.1em;
+  text-align: right;
+  text-shadow: 0 0 6px var(--amber-glow);
+}
+.tz-city .nm {
+  color: var(--fg);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tz-city .tm { color: var(--fg-strong); font-variant-numeric: tabular-nums; }
+.tz-city .off { color: var(--dim); font-size: 0.85em; }
+
 /* ---- status bar ------------------------------------------ */
 
 .tui-status {

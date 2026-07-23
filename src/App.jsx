@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Screen, Window, Prompt, Activity, Clock, StatusDot, Field, Button, Notice, Confirm } from './terminal.jsx'
+import { Screen, Window, Prompt, Activity, Clock, StatusDot, Field, Button, Notice, Confirm, Timezones } from './terminal.jsx'
 import { useRovingMenu } from './useRovingMenu.js'
 import { useMetricsValue } from './metrics.js'
 import { useAuth } from './auth.js'
@@ -44,6 +44,9 @@ const OUT_COLOR = { dim: 'var(--dim)', red: 'var(--red)', green: 'var(--green)',
 const LINKS_COMMANDS = new Set(['./links.sh', '.\\links.sh', 'links.sh', 'links', 'sh links.sh', 'bash links.sh'])
 const isLinksCommand = (command) => LINKS_COMMANDS.has(command.trim())
 
+const TIMEZONES_COMMANDS = new Set(['./timezones.sh', '.\\timezones.sh', 'timezones.sh', 'timezones', 'tz', 'sh timezones.sh', 'bash timezones.sh'])
+const isTimezonesCommand = (command) => TIMEZONES_COMMANDS.has(command.trim())
+
 function ArrowGlyph() {
   return <span className="arrow" aria-hidden="true">↵</span>
 }
@@ -80,6 +83,7 @@ function LsBlock() {
       <span style={{ color: 'var(--cyan)' }}>fsociety00.dat</span>
       <span style={{ color: 'var(--green)' }}>links.sh*</span>
       <span style={{ color: 'var(--fg)' }}>readme.txt</span>
+      <span style={{ color: 'var(--green)' }}>timezones.sh*</span>
     </div>
   )
 }
@@ -253,6 +257,7 @@ export default function App() {
         { kind: 'text', text: '  cat about.txt       read the about file', color: 'dim' },
         { kind: 'text', text: '  ls                  list files', color: 'dim' },
         { kind: 'text', text: '  ./links.sh          launch the site navigator', color: 'dim' },
+        { kind: 'text', text: '  ./timezones.sh      world clock map', color: 'dim' },
         { kind: 'text', text: '  ./admin-login.sh    root login (psk + totp)', color: 'dim' },
         { kind: 'text', text: '  logout              end your user session', color: 'dim' },
         { kind: 'text', text: '  clear               clear the screen', color: 'dim' },
@@ -278,7 +283,7 @@ export default function App() {
       const f = c.slice(4).trim()
       push({
         kind: 'text', color: 'red',
-        text: f === 'links.sh' || f === 'admin-login.sh' || f === './links.sh' || f === './admin-login.sh'
+        text: ['links.sh', 'admin-login.sh', 'timezones.sh', './links.sh', './admin-login.sh', './timezones.sh'].includes(f)
           ? `cat: ${f.replace(/^\.\//, '')}: permission denied`
           : `cat: ${f}: no such file or directory`,
       })
@@ -290,6 +295,7 @@ export default function App() {
       setMode('links')
       return
     }
+    if (isTimezonesCommand(c)) { push({ kind: 'timezones' }); return }
     if (c === './admin-login.sh' || c === '.\\admin-login.sh' || c === 'admin-login.sh' || c === 'admin-login' || c === 'sh admin-login.sh') {
       setAdminPrompt({ psk: '', totp: '', err: '', busy: false })
       return
@@ -452,6 +458,7 @@ export default function App() {
               if (l.kind === 'about') return <AboutBlock key={i} />
               if (l.kind === 'ls') return <LsBlock key={i} />
               if (l.kind === 'readme') return <ReadmeBlock key={i} />
+              if (l.kind === 'timezones') return <Timezones key={i} />
               if (l.kind === 'links') return renderLinksProgram(i)
               return null
             })}
