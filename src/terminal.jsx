@@ -363,6 +363,7 @@ const LAT_BOT = -56
 // [centerLon, centerLat, radiusLon, radiusLat] blobs, unioned into land.
 const CONTINENTS = [
   [-100, 45, 30, 22],   // north america
+  [-140, 62, 22, 11],   // alaska + nw canada
   [-85, 14, 9, 13],     // central america
   [-42, 72, 13, 9],     // greenland
   [-19, 65, 6, 5],      // iceland
@@ -371,6 +372,7 @@ const CONTINENTS = [
   [-3, 54, 5, 7],       // british isles
   [18, 3, 20, 32],      // africa
   [86, 50, 50, 28],     // asia (north / central) — pulled west to leave a sea gap off japan
+  [153, 64, 27, 9],     // ne siberia: chukotka / kamchatka peninsula (top-right)
   [50, 28, 18, 14],     // middle east
   [78, 22, 12, 15],     // india
   [110, 5, 20, 12],     // se asia / indonesia
