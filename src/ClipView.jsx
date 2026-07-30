@@ -7,7 +7,7 @@ import { fmtSize } from './format.js'
 /* Read a clip by path. Visitors without access get a neutral route back home;
  * 404 shows "no such clip (or it expired)" + a button to create a clip at this
  * path. Content is rendered read-only with copy/download/follow controls. */
-export default function ClipView() {
+export default function ClipView({ fallbackMissing = false }) {
   const { path } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -66,10 +66,12 @@ export default function ClipView() {
 
         {status === 'missing' && (
           <div className="px-6 py-10 flex flex-col gap-4">
-            <Notice kind="error">{err || 'no such clip (or it expired)'}</Notice>
-            <Button onClick={() => navigate(`/clip?path=${encodeURIComponent(path)}`)}>
-              make clip for this path
-            </Button>
+            <Notice kind="error">{fallbackMissing ? 'there is no page for this url.' : (err || 'no such clip (or it expired)')}</Notice>
+            {!fallbackMissing && (
+              <Button onClick={() => navigate(`/clip?path=${encodeURIComponent(path)}`)}>
+                make clip for this path
+              </Button>
+            )}
           </div>
         )}
 

@@ -9,6 +9,8 @@ import Login from './Login.jsx'
 import Clip from './Clip.jsx'
 import ClipView from './ClipView.jsx'
 import Admin from './Admin.jsx'
+import Shorten from './Shorten.jsx'
+import PathResolver from './PathResolver.jsx'
 import { MetricsProvider } from './MetricsProvider.jsx'
 import { AuthProvider } from './AuthProvider.jsx'
 
@@ -26,9 +28,10 @@ createRoot(document.getElementById('root')).render(
             <Route path="/clip/:path" element={<ClipView />} />
             <Route path="/c/:path" element={<ClipView />} />
             <Route path="/admin" element={<Admin />} />
-            {/* Named pages above take precedence. Any other single-segment
-                path is treated as a clip id before giving up as missing. */}
-            <Route path="/:path" element={<ClipView />} />
+            <Route path="/short" element={<Shorten />} />
+            <Route path="/s" element={<Shorten />} />
+            <Route path="/s/:path" element={<PathResolver shortOnly />} />
+            <Route path="/:path" element={<PathResolver />} />
           </Routes>
         </MetricsProvider>
       </AuthProvider>

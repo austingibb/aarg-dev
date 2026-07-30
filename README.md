@@ -17,6 +17,19 @@ Personal website for [aarg.dev](https://aarg.dev). A minimal landing page with l
   1-day TTL, viewable from any computer (after login) with a copy button. A clip can
   carry one file attachment (max 5 MB, stored in SQLite, downloadable from the clip
   page, deleted with the clip). Both read and write require a whitelisted login.
+- **Short links** — public URL creation at `/short`, with generated 4-character
+  or custom paths and selectable lifetimes from one minute through forever (plus
+  single-use). `/<path>` checks short links before clips; `/s/<path>` is the
+  unambiguous form. Creation permanently disables itself after 20 creations in
+  a rolling 24-hour window until the database setting is reviewed and reset;
+  reads remain available.
+
+After investigating a creation shutdown, re-enable it explicitly with SQLite:
+
+```sql
+UPDATE app_settings SET value = '0' WHERE key = 'short_link_creation_disabled';
+DELETE FROM short_link_creations;
+```
 - **User login** — email + password self-serve signup. The whitelist (managed by admin)
   gates the clip feature; the amber `clip` menu item appears only for whitelisted users.
 - **Admin portal** — admin logs in with a PSK + TOTP code, then manages the whitelist

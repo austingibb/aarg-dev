@@ -1,4 +1,4 @@
-/* SQLite persistence for aarg.dev (users, whitelist, clips).
+/* SQLite persistence for aarg.dev (users, whitelist, clips, short links).
  * Uses the built-in node:sqlite DatabaseSync (Node v24+) — zero npm deps.
  * WAL mode for safe concurrent reads from nginx + the hourly purge.
  */
@@ -38,6 +38,24 @@ CREATE TABLE IF NOT EXISTS clip_files (
   size       INTEGER NOT NULL,
   data       BLOB NOT NULL
 );
+CREATE TABLE IF NOT EXISTS short_links (
+  path       TEXT PRIMARY KEY,
+  target_url TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER,
+  single_use INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS short_link_creations (
+  id         INTEGER PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  ip         TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS short_link_creations_created_at
+  ON short_link_creations(created_at);
+CREATE TABLE IF NOT EXISTS app_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 `)
 
 /* ---- prepared-statement wrappers ---- */
@@ -57,4 +75,14 @@ export const stmt = {
   insertClipFile: db.prepare('INSERT INTO clip_files (clip_path, name, mime, size, data) VALUES (?, ?, ?, ?, ?)'),
   getClipFileMeta:db.prepare('SELECT name, mime, size FROM clip_files WHERE clip_path = ?'),
   getClipFile:    db.prepare('SELECT name, mime, size, data FROM clip_files WHERE clip_path = ?'),
+  insertShortLink: db.prepare('INSERT INTO short_links (path, target_url, created_at, expires_at, single_use) VALUES (?, ?, ?, ?, ?)'),
+  getShortLink:    db.prepare('SELECT path, target_url, created_at, expires_at, single_use FROM short_links WHERE path = ?'),
+  shortLinkExists: db.prepare('SELECT 1 FROM short_links WHERE path = ?'),
+  deleteShortLink: db.prepare('DELETE FROM short_links WHERE path = ?'),
+  purgeExpiredShortLinks: db.prepare('DELETE FROM short_links WHERE expires_at IS NOT NULL AND expires_at <= ?'),
+  countRecentShortLinkCreations: db.prepare('SELECT count(*) AS count FROM short_link_creations WHERE created_at > ?'),
+  recordShortLinkCreation: db.prepare('INSERT INTO short_link_creations (created_at, ip) VALUES (?, ?)'),
+  purgeOldShortLinkCreations: db.prepare('DELETE FROM short_link_creations WHERE created_at <= ?'),
+  getSetting:      db.prepare('SELECT value FROM app_settings WHERE key = ?'),
+  setSetting:      db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'),
 }

@@ -116,6 +116,7 @@ export default function App() {
   // Dynamic links: base + (whitelisted? clip) + (email? logout : login) + (admin? red admin).
   const links = [
     ...LINKS,
+    { label: 'shorten', hint: 'public short urls', to: '/short', variant: 'short' },
     ...(user?.whitelisted ? [{ label: 'clip', hint: 'ephemeral text and small file drop', to: '/clip', variant: 'clip' }] : []),
     ...(user?.email
       ? [{ label: 'logout', hint: user.email, action: 'logout' }]

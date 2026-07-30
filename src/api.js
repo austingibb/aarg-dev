@@ -77,3 +77,8 @@ export async function uploadClipFile(path, file) {
 }
 
 export const clipFileUrl = (path) => `/api/clip/${encodeURIComponent(path)}/file`
+
+export const createShortLink = (url, path, lifetime) =>
+  api('POST', '/api/short-links', { url, ...(path ? { path } : {}), lifetime })
+export const getShortLink = (path) =>
+  api('GET', `/api/short-links/${encodeURIComponent(path)}`)

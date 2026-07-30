@@ -18,6 +18,23 @@ export const FILE_MAX_BYTES = 5 * 1024 * 1024
 const CLIP_PATH_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
 const MIME_RE = /^[\w.+-]+\/[\w.+-]+$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const SHORT_PATH_RE = /^[A-Za-z0-9_-]{1,2048}$/
+const SHORT_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+const SHORT_CREATION_LIMIT = 20
+const SHORT_WINDOW_MS = 24 * 60 * 60 * 1000
+const RESERVED_PATHS = new Set(['api', 'admin', 'blog', 'c', 'clip', 'login', 's', 'short'])
+const SHORT_TTLS = new Map([
+  ['forever', null],
+  ['1year', 365 * 24 * 60 * 60 * 1000],
+  ['1month', 30 * 24 * 60 * 60 * 1000],
+  ['1week', 7 * 24 * 60 * 60 * 1000],
+  ['1day', 24 * 60 * 60 * 1000],
+  ['1hour', 60 * 60 * 1000],
+  ['30min', 30 * 60 * 1000],
+  ['10min', 10 * 60 * 1000],
+  ['1min', 60 * 1000],
+  ['single', null],
+])
 
 export function send(res, status, obj) {
   const body = JSON.stringify(obj)
@@ -161,6 +178,91 @@ export function adminDeleteClip({ res, params }) {
   if (!CLIP_PATH_RE.test(path)) return send(res, 400, { error: 'invalid path' })
   stmt.deleteClip.run(path)
   return send(res, 200, { ok: true })
+}
+
+/* ---------------- public short links ---------------- */
+export function createShortLink({ res, body, ip }) {
+  const targetUrl = normalizeTargetUrl(body.url)
+  if (!targetUrl) return send(res, 400, { error: 'a valid http(s) url is required' })
+
+  const lifetime = String(body.lifetime || 'forever')
+  if (!SHORT_TTLS.has(lifetime)) return send(res, 400, { error: 'invalid lifetime' })
+
+  const requested = String(body.path || '').trim()
+  if (requested && (!SHORT_PATH_RE.test(requested) || RESERVED_PATHS.has(requested.toLowerCase()))) {
+    return send(res, 400, { error: 'custom path must use letters, numbers, _ or - and cannot be a reserved service path' })
+  }
+
+  const now = Date.now()
+  let path
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const disabled = stmt.getSetting.get('short_link_creation_disabled')?.value === '1'
+    if (disabled) {
+      db.exec('ROLLBACK')
+      return send(res, 503, { error: 'short-link creation is disabled while abuse is investigated; existing links still work' })
+    }
+
+    // The audit table is deliberately independent from live links: expiry and
+    // single-use reads cannot erase evidence from the rolling abuse window.
+    stmt.purgeOldShortLinkCreations.run(now - SHORT_WINDOW_MS)
+    const count = Number(stmt.countRecentShortLinkCreations.get(now - SHORT_WINDOW_MS)?.count || 0)
+    if (count >= SHORT_CREATION_LIMIT) {
+      stmt.setSetting.run('short_link_creation_disabled', '1')
+      db.exec('COMMIT')
+      return send(res, 503, { error: 'short-link creation has been disabled pending abuse review; existing links still work' })
+    }
+
+    path = requested || generateShortPath()
+    if (!path) {
+      db.exec('ROLLBACK')
+      return send(res, 507, { error: 'could not allocate a short path, retry' })
+    }
+    if (stmt.shortLinkExists.get(path)) {
+      db.exec('ROLLBACK')
+      return send(res, 409, { error: 'short path already in use' })
+    }
+
+    const ttl = SHORT_TTLS.get(lifetime)
+    const expiresAt = ttl == null ? null : now + ttl
+    stmt.insertShortLink.run(path, targetUrl, now, expiresAt, lifetime === 'single' ? 1 : 0)
+    stmt.recordShortLinkCreation.run(now, String(ip || 'unknown'))
+    db.exec('COMMIT')
+    return send(res, 201, {
+      path,
+      url: `/${path}`,
+      unambiguous_url: `/s/${path}`,
+      target_url: targetUrl,
+      expires_at: expiresAt,
+      single_use: lifetime === 'single',
+    })
+  } catch (err) {
+    try { db.exec('ROLLBACK') } catch { /* transaction may already be closed */ }
+    throw err
+  }
+}
+
+export function resolveShortLink({ res, params }) {
+  let path
+  try { path = decodeURIComponent(String(params.path || '')) } catch { return send(res, 404, { error: 'no such short link' }) }
+  if (!SHORT_PATH_RE.test(path)) return send(res, 404, { error: 'no such short link' })
+
+  const now = Date.now()
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const link = stmt.getShortLink.get(path)
+    if (!link || (link.expires_at != null && link.expires_at <= now)) {
+      if (link) stmt.deleteShortLink.run(path)
+      db.exec('COMMIT')
+      return send(res, 404, { error: 'no such short link (or it expired)' })
+    }
+    if (link.single_use) stmt.deleteShortLink.run(path)
+    db.exec('COMMIT')
+    return send(res, 200, { path: link.path, target_url: link.target_url })
+  } catch (err) {
+    try { db.exec('ROLLBACK') } catch { /* transaction may already be closed */ }
+    throw err
+  }
 }
 
 /* ---------------- clip endpoints ---------------- */
@@ -392,9 +494,30 @@ function generatePath() {
   return null
 }
 
+function generateShortPath() {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    let path = ''
+    for (let i = 0; i < 4; i++) path += SHORT_CHARS[randomInt(0, SHORT_CHARS.length)]
+    if (!RESERVED_PATHS.has(path.toLowerCase()) && !stmt.shortLinkExists.get(path)) return path
+  }
+  return null
+}
+
+function normalizeTargetUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim())
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null
+  } catch { return null }
+}
+
 let lastPurge = 0
 export function purgeExpired(now = Date.now()) {
   if (now - lastPurge < 60 * 1000) return
   lastPurge = now
   stmt.purgeExpired.run(now)
+}
+
+export function purgeExpiredShortLinks(now = Date.now()) {
+  stmt.purgeExpiredShortLinks.run(now)
+  stmt.purgeOldShortLinkCreations.run(now - SHORT_WINDOW_MS)
 }

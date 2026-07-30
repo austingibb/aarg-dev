@@ -31,6 +31,9 @@ const ROUTES = [
   { method: 'DELETE', re: /^\/api\/admin\/whitelist\/(?<email>[^/]+)$/,    handler: h.removeWhitelist,  auth: 'admin' },
   { method: 'GET',    re: /^\/api\/admin\/clips$/,                         handler: h.adminListClips,    auth: 'admin' },
   { method: 'DELETE', re: /^\/api\/admin\/clips\/(?<path>[^/]+)$/,         handler: h.adminDeleteClip,   auth: 'admin' },
+  // public short links
+  { method: 'POST',   re: /^\/api\/short-links$/,                         handler: h.createShortLink,   auth: 'public' },
+  { method: 'GET',    re: /^\/api\/short-links\/(?<path>[^/]+)$/,          handler: h.resolveShortLink,  auth: 'public' },
   // clip
   { method: 'GET',    re: /^\/api\/clip\/(?<path>[^/]+)\/file$/, handler: h.downloadClipFile, auth: 'whitelisted' },
   { method: 'POST',   re: /^\/api\/clip\/(?<path>[^/]+)\/file$/, handler: h.uploadClipFile,   auth: 'whitelisted', raw: true },
@@ -177,7 +180,10 @@ const server = createServer(async (req, res) => {
 
 // Hourly purge of expired clips (in addition to lazy purge in clip handlers).
 setInterval(() => {
-  try { h.purgeExpired?.(Date.now()) } catch (e) { console.error('[purge]', e) }
+  try {
+    h.purgeExpired?.(Date.now())
+    h.purgeExpiredShortLinks?.(Date.now())
+  } catch (e) { console.error('[purge]', e) }
 }, 60 * 60 * 1000).unref?.()
 
 server.listen(PORT, HOST, () => {
