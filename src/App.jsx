@@ -26,6 +26,7 @@ const LINKS = [
 
 const REDUCED = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const STARTUP_SPEED = 0.5
 
 /* The intro animation plays once per page load. Coming back from /blog,
  * /login, /admin, etc. remounts App — skip straight to the booted session
@@ -146,16 +147,16 @@ export default function App() {
   const cancelled = (t) => t !== tokenRef.current
 
   /* Type a command at a fresh prompt, char by char, then commit it. */
-  async function typeCmd(t, text) {
+  async function typeCmd(t, text, speed = 1) {
     push({ kind: 'cmd', text: REDUCED ? text : '', live: true })
     if (!REDUCED) {
       for (let i = 1; i <= text.length; i++) {
-        await sleep(24 + Math.random() * 34)
+        await sleep((24 + Math.random() * 34) * speed)
         if (cancelled(t)) return false
         const partial = text.slice(0, i)
         setLines((ls) => ls.map((l, j) => (j === ls.length - 1 ? { ...l, text: partial } : l)))
       }
-      await sleep(150)
+      await sleep(150 * speed)
     }
     if (cancelled(t)) return false
     setLines((ls) => ls.map((l, j) => (j === ls.length - 1 ? { ...l, text, live: false } : l)))
@@ -166,18 +167,18 @@ export default function App() {
   async function runBoot(t) {
     setMode('boot')
     setLines([])
-    await sleep(REDUCED ? 0 : 260)
+    await sleep(REDUCED ? 0 : 260 * STARTUP_SPEED)
     if (cancelled(t)) return
-    if (!(await typeCmd(t, 'whoami'))) return
-    await sleep(90); if (cancelled(t)) return
+    if (!(await typeCmd(t, 'whoami', STARTUP_SPEED))) return
+    await sleep(90 * STARTUP_SPEED); if (cancelled(t)) return
     push({ kind: 'whoami' })
-    await sleep(REDUCED ? 0 : 420); if (cancelled(t)) return
-    if (!(await typeCmd(t, 'cat about.txt'))) return
-    await sleep(90); if (cancelled(t)) return
+    await sleep(REDUCED ? 0 : 420 * STARTUP_SPEED); if (cancelled(t)) return
+    if (!(await typeCmd(t, 'cat about.txt', STARTUP_SPEED))) return
+    await sleep(90 * STARTUP_SPEED); if (cancelled(t)) return
     push({ kind: 'about' })
-    await sleep(REDUCED ? 0 : 420); if (cancelled(t)) return
-    if (!(await typeCmd(t, './links.sh'))) return
-    await sleep(REDUCED ? 0 : 180); if (cancelled(t)) return
+    await sleep(REDUCED ? 0 : 420 * STARTUP_SPEED); if (cancelled(t)) return
+    if (!(await typeCmd(t, './links.sh', STARTUP_SPEED))) return
+    await sleep(REDUCED ? 0 : 180 * STARTUP_SPEED); if (cancelled(t)) return
     push({ kind: 'links' })
     setMode('links')
     bootedThisLoad = true
