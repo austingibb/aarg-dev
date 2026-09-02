@@ -375,8 +375,10 @@ const CONTINENTS = [
   [153, 64, 27, 9],     // ne siberia: chukotka / kamchatka peninsula (top-right)
   [50, 28, 18, 14],     // middle east
   [78, 22, 12, 15],     // india
-  [110, 5, 20, 12],     // se asia / indonesia
-  [115, 18, 11, 12],    // south china coast / indochina / philippines
+  [106, 4, 15, 10],     // se asia / indonesia — kept west of the philippines
+  [115, 18, 11, 8],     // south china coast / indochina
+  [121, 24, 3, 5],      // taiwan — a distinct island off the china coast
+  [121, 15, 3, 4],      // philippines — detached for clarity at this resolution
   [132, -26, 20, 13],   // australia
   [147, -31, 9, 9],     // eastern australia
   [139.7, 35, 4, 5],    // japan — a small offshore island, not fused to the mainland
@@ -440,6 +442,7 @@ const TZ_CITIES = [
   { name: 'beijing',       tz: 'Asia/Shanghai',        lon: 116.4, lat: 39.9 },
   { name: 'shanghai',      tz: 'Asia/Shanghai',        lon: 121.5, lat: 31.2 },
   { name: 'hong kong',     tz: 'Asia/Hong_Kong',       lon: 114.2, lat: 22.3 },
+  { name: 'taipei',        tz: 'Asia/Taipei',          lon: 121.6, lat: 25.0 },
   { name: 'manila',        tz: 'Asia/Manila',          lon: 121.0, lat: 14.6 },
   { name: 'tokyo',         tz: 'Asia/Tokyo',           lon: 139.7, lat: 35.7 },
   { name: 'sydney',        tz: 'Australia/Sydney',     lon: 151.2, lat: -33.9 },
