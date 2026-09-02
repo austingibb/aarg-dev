@@ -131,7 +131,7 @@ export function PriceChart({ values, color = 'cyan', height = '3.5rem', floor = 
                 flex: 1,
                 height: `${Math.max(2, ((x - lo) / span) * 100)}%`,
                 background: `var(--${color})`,
-                opacity: 0.5 + 0.45 * (i / (v.length - 1 || 1)), // brighten toward now
+                opacity: 0.85,
                 borderRadius: '1px 1px 0 0',
               }}
             />
