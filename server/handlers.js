@@ -180,6 +180,29 @@ export function adminDeleteClip({ res, params }) {
   return send(res, 200, { ok: true })
 }
 
+export function adminListShortLinks({ res }) {
+  const now = Date.now()
+  stmt.purgeExpiredShortLinks.run(now)
+  const rows = stmt.listLiveShortLinks.all(now).map((row) => ({
+    path: row.path,
+    target_url: row.target_url,
+    created_at: row.created_at,
+    expires_at: row.expires_at,
+    single_use: !!row.single_use,
+  }))
+  return send(res, 200, rows)
+}
+
+export function adminDeleteShortLink({ res, params }) {
+  let path
+  try { path = decodeURIComponent(String(params.path || '')) } catch {
+    return send(res, 400, { error: 'invalid path' })
+  }
+  if (!SHORT_PATH_RE.test(path)) return send(res, 400, { error: 'invalid path' })
+  stmt.deleteShortLink.run(path)
+  return send(res, 200, { ok: true })
+}
+
 /* ---------------- public short links ---------------- */
 export function createShortLink({ res, body, ip }) {
   const targetUrl = normalizeTargetUrl(body.url)

@@ -31,6 +31,8 @@ const ROUTES = [
   { method: 'DELETE', re: /^\/api\/admin\/whitelist\/(?<email>[^/]+)$/,    handler: h.removeWhitelist,  auth: 'admin' },
   { method: 'GET',    re: /^\/api\/admin\/clips$/,                         handler: h.adminListClips,    auth: 'admin' },
   { method: 'DELETE', re: /^\/api\/admin\/clips\/(?<path>[^/]+)$/,         handler: h.adminDeleteClip,   auth: 'admin' },
+  { method: 'GET',    re: /^\/api\/admin\/short-links$/,                   handler: h.adminListShortLinks,   auth: 'admin' },
+  { method: 'DELETE', re: /^\/api\/admin\/short-links\/(?<path>[^/]+)$/,    handler: h.adminDeleteShortLink,  auth: 'admin' },
   // public short links
   { method: 'POST',   re: /^\/api\/short-links$/,                         handler: h.createShortLink,   auth: 'public' },
   { method: 'GET',    re: /^\/api\/short-links\/(?<path>[^/]+)$/,          handler: h.resolveShortLink,  auth: 'public' },

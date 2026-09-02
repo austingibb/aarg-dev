@@ -79,6 +79,12 @@ export const stmt = {
   getShortLink:    db.prepare('SELECT path, target_url, created_at, expires_at, single_use FROM short_links WHERE path = ?'),
   shortLinkExists: db.prepare('SELECT 1 FROM short_links WHERE path = ?'),
   deleteShortLink: db.prepare('DELETE FROM short_links WHERE path = ?'),
+  listLiveShortLinks: db.prepare(`
+    SELECT path, target_url, created_at, expires_at, single_use
+    FROM short_links
+    WHERE expires_at IS NULL OR expires_at > ?
+    ORDER BY created_at DESC
+  `),
   purgeExpiredShortLinks: db.prepare('DELETE FROM short_links WHERE expires_at IS NOT NULL AND expires_at <= ?'),
   countRecentShortLinkCreations: db.prepare('SELECT count(*) AS count FROM short_link_creations WHERE created_at > ?'),
   recordShortLinkCreation: db.prepare('INSERT INTO short_link_creations (created_at, ip) VALUES (?, ?)'),

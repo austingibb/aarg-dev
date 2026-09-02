@@ -6,6 +6,7 @@ import {
   adminLogin, adminLogout,
   listWhitelist, addWhitelist, removeWhitelist,
   adminListClips, adminDeleteClip,
+  adminListShortLinks, adminDeleteShortLink,
 } from './api.js'
 
 /* Unlisted route (typed directly, or reached via the home command prompt).
@@ -82,16 +83,18 @@ function AdminLogin({ refresh, navigate }) {
 function AdminConsole({ user, refresh, navigate }) {
   // ClipView's "‹ admin console" back link passes { section: 'clips' } so the
   // console reopens on the tab you left from.
-  const initialSection = useLocation().state?.section === 'clips' ? 'clips' : 'whitelist'
-  const [section, setSection] = useState(initialSection) // 'whitelist' | 'clips'
+  const requestedSection = useLocation().state?.section
+  const initialSection = ['whitelist', 'clips', 'short-links'].includes(requestedSection) ? requestedSection : 'whitelist'
+  const [section, setSection] = useState(initialSection)
   const [wl, setWl] = useState([])
   const [clips, setClips] = useState([])
+  const [shortLinks, setShortLinks] = useState([])
   const [err, setErr] = useState('')
 
   const load = useCallback(async () => {
     try {
-      const [w, c] = await Promise.all([listWhitelist(), adminListClips()])
-      setWl(w); setClips(c)
+      const [w, c, s] = await Promise.all([listWhitelist(), adminListClips(), adminListShortLinks()])
+      setWl(w); setClips(c); setShortLinks(s)
     } catch (e) { setErr(e?.error || 'failed to load') }
   }, [])
 
@@ -121,14 +124,15 @@ function AdminConsole({ user, refresh, navigate }) {
         <div className="flex">
           <SectionTab active={section === 'whitelist'} onClick={() => setSection('whitelist')} label="whitelist" />
           <SectionTab active={section === 'clips'} onClick={() => setSection('clips')} label="clips" />
+          <SectionTab active={section === 'short-links'} onClick={() => setSection('short-links')} label="short urls" />
         </div>
         <hr className="tui-sep" />
 
         <div className="px-6 py-6">
           <Notice kind="error">{err}</Notice>
-          {section === 'whitelist'
-            ? <WhitelistSection wl={wl} reload={load} />
-            : <ClipsSection clips={clips} reload={load} />}
+          {section === 'whitelist' && <WhitelistSection wl={wl} reload={load} />}
+          {section === 'clips' && <ClipsSection clips={clips} reload={load} />}
+          {section === 'short-links' && <ShortLinksSection links={shortLinks} reload={load} />}
         </div>
 
         <hr className="tui-sep" />
@@ -235,6 +239,49 @@ function ClipsSection({ clips, reload }) {
             expires {new Date(c.expires_at).toLocaleString()}
           </span>
           <Button variant="danger" onClick={() => del(c.path)}>delete</Button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ---------------- short urls section ---------------- */
+function ShortLinksSection({ links, reload }) {
+  const [msg, setMsg] = useState('')
+
+  async function del(path) {
+    setMsg('')
+    try {
+      await adminDeleteShortLink(path)
+      await reload()
+    } catch (e2) { setMsg(e2?.error || 'failed') }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {msg && <Notice kind="error">{msg}</Notice>}
+      {links.length === 0 && <p className="text-xs" style={{ color: 'var(--dim)' }}>no live short urls.</p>}
+      {links.map((link) => (
+        <div key={link.path} className="flex items-center gap-3 py-2 flex-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
+          <span style={{ color: 'var(--cyan)' }}>/{link.path}</span>
+          <a
+            href={link.target_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs"
+            style={{ color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '22rem' }}
+            title={link.target_url}
+          >
+            {link.target_url}
+          </a>
+          <span className="text-xs ml-auto" style={{ color: 'var(--dim)' }}>
+            {link.single_use
+              ? 'single use'
+              : link.expires_at
+                ? `expires ${new Date(link.expires_at).toLocaleString()}`
+                : 'forever'}
+          </span>
+          <Button variant="danger" onClick={() => del(link.path)}>delete</Button>
         </div>
       ))}
     </div>

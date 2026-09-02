@@ -45,6 +45,8 @@ export const addWhitelist  = (email)       => api('POST', '/api/admin/whitelist'
 export const removeWhitelist = (email)    => api('DELETE', `/api/admin/whitelist/${encodeURIComponent(email)}`)
 export const adminListClips  = ()          => api('GET',  '/api/admin/clips')
 export const adminDeleteClip = (path)      => api('DELETE', `/api/admin/clips/${encodeURIComponent(path)}`)
+export const adminListShortLinks = ()      => api('GET', '/api/admin/short-links')
+export const adminDeleteShortLink = (path) => api('DELETE', `/api/admin/short-links/${encodeURIComponent(path)}`)
 
 export const getClip       = (path)        => api('GET',  `/api/clip/${encodeURIComponent(path)}`)
 export const createClip    = (path, content, withFile = false, replace = false) =>
