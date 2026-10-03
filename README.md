@@ -80,6 +80,87 @@ Set `CLIP_TTL_SECONDS` to override the 24h clip lifetime (handy for testing).
 
 ## Build
 
+### Curiosity reward (alpha)
+
+The reward is a **simulation only**: it contains a deliberately invalid test
+phrase, no cryptocurrency, and no real credential input/storage. Real DOGE
+wallet provisioning is deferred to v1.0. Hosting migration is deferred to v2.0.
+
+The existing admin console has a **reward** tab with the stable physical URL,
+current state, and **Arm reward**. A cryptographically random URL is generated
+once when the new backend first initializes its database; it is not published
+in client code or listed in the public shortener. The password verifier is
+server-side. The owner-only `SCAVENGER_HUNT.md` is ignored by Git and is not a
+build asset. Keep that document privately alongside the deployment handoff.
+
+Password entry issues an HttpOnly browser cookie. The first successful Claim
+atomically reserves the reward. Only that browser token may retrieve the
+placeholder for one hour from the original claim. Acknowledgment ends access
+early. Neither timeout nor acknowledgment allows a second winner or rearming.
+Unclaimed eligibility cookies permit claiming for 24 hours; the winning
+reservation has its own fixed one-hour deadline. Clearing cookies loses access.
+
+Reward tables are additive to the existing SQLite database. No npm dependencies
+or external wallet APIs are added. The API remains single-process Node behind
+nginx/Cloudflare. Reward POSTs require an exact Origin match:
+
+- `REWARD_ORIGIN`: defaults to `https://aarg.dev`; set the exact dev frontend origin locally.
+- `REWARD_PASSWORD_HASH`: required server-only salted scrypt verifier, using the
+  same format as admin passwords. Set it in ignored `.env`; never prefix it with
+  `VITE_`. Neither the printed word nor its real verifier belongs in source or
+  tests. Tests generate their own random password and verifier on every run.
+- `AARG_DATA_DIR`: optional isolated SQLite directory; defaults to `data/`.
+- `API_PORT`: defaults to `4174`; `0` allocates an ephemeral port for tests.
+- `AARG_API_TARGET`: optional Vite proxy target; defaults to the existing API.
+
+Production builds explicitly use Vite's Oxc minifier and disable source maps.
+This is lightweight code mangling, not an authorization control. Access checks
+remain on the backend. The physical URL, password verifier, and claim database
+remain private regardless of the repository's visibility.
+
+**Do not run `npm run build` during development verification:** `dist/` is served
+live by nginx on this machine. Use `npm run build:check` to write `dist-check/`.
+`npm run test:reward` uses temporary databases, fake session credentials, and
+ephemeral API ports. It never reads `.env` or connects to the production API.
+
+`node tests/reward-browser.mjs` runs the isolated Chromium flow and saves screenshots
+under `.reward-test.local/`. Set `PLAYWRIGHT_MODULE` to an installed Playwright
+module file URL and `CHROMIUM_PATH` to its installed browser executable first.
+The harness uses port 5188 (strict), blocks external browser requests, generates
+fake admin credentials, and cleans up its temporary database and servers.
+
+For a manually exercised isolated alpha, open a backend PowerShell:
+
+```powershell
+$env:AARG_DATA_DIR = Join-Path $env:TEMP ('aarg-alpha-' + [guid]::NewGuid())
+$env:API_PORT = '4184'
+$env:REWARD_ORIGIN = 'http://localhost:5180'
+npm run api
+```
+
+This uses the existing local `.env` for your admin login, but the separate data
+directory protects production state. In a second PowerShell:
+
+```powershell
+$env:AARG_API_TARGET = 'http://127.0.0.1:4184'
+npm run dev -- --port 5180 --strictPort
+```
+
+Use `localhost` in the browser so the Secure cookie can work on a local secure
+context. Confirm cookie acceptance during browser testing. A fresh isolated
+data directory gives a fresh alpha campaign for repeated tests; normal arming
+never resets a claimed campaign. Do not delete or restore production state to
+repeat a test.
+
+Rollout, after Test approval: take a consistent SQLite backup, start the updated
+API (which adds the reward tables), publish the reviewed frontend build, then
+open admin and arm deliberately. Merely deploying leaves the reward disarmed.
+For rollback, restore the prior application build while retaining the current
+database. Never roll the database back to an unclaimed snapshot after a claim.
+Monitor reward 5xx/429 responses and status transitions; never log credentials,
+cookies, or response bodies. No automatic service restart or live deployment
+is performed by the development commands above.
+
 ```bash
 npm run build
 ```

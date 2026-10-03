@@ -8,16 +8,23 @@
 import { createServer } from 'node:http'
 import { readSession } from './auth.js'
 import * as h from './handlers.js'
+import * as reward from './reward-handlers.js'
 
 const { sessionCtx } = h
 
-const PORT = Number(process.env.API_PORT) || 4174
+const PORT = process.env.API_PORT === undefined ? 4174 : Number(process.env.API_PORT)
 const HOST = '127.0.0.1'
 const MAX_BODY = 256 * 1024
 
 /* Router table: { method, re, handler, auth }.
  * `re` uses named groups for path params (e.g. (?<email>[^/]+)). */
 const ROUTES = [
+  { method: 'GET', re: /^\/api\/admin\/reward$/, handler: reward.adminReward, auth: 'admin', reward: true },
+  { method: 'POST', re: /^\/api\/admin\/reward\/arm$/, handler: reward.adminArmReward, auth: 'admin', reward: true },
+  { method: 'GET', re: /^\/api\/reward\/(?<slug>[A-Za-z0-9_-]{22})\/status$/, handler: reward.rewardStatus, auth: 'public', reward: true },
+  { method: 'POST', re: /^\/api\/reward\/(?<slug>[A-Za-z0-9_-]{22})\/unlock$/, handler: reward.rewardUnlock, auth: 'public', reward: true },
+  { method: 'POST', re: /^\/api\/reward\/(?<slug>[A-Za-z0-9_-]{22})\/claim$/, handler: reward.rewardClaim, auth: 'public', reward: true },
+  { method: 'POST', re: /^\/api\/reward\/(?<slug>[A-Za-z0-9_-]{22})\/acknowledge$/, handler: reward.rewardAcknowledge, auth: 'public', reward: true },
   // auth
   { method: 'POST',   re: /^\/api\/auth\/signup$/,  handler: h.signup,  auth: 'public' },
   { method: 'POST',   re: /^\/api\/auth\/login$/,   handler: h.login,   auth: 'public' },
@@ -156,6 +163,14 @@ const server = createServer(async (req, res) => {
   }
 
   const params = route.re.exec(url).groups || {}
+  if (route.reward) {
+    res.setHeader('Cache-Control', 'no-store')
+    // Explicitly configured origin: never trust an arbitrary forwarded Host.
+    const allowedOrigin = process.env.REWARD_ORIGIN || 'https://aarg.dev'
+    if ((origin && origin !== allowedOrigin) || req.headers['sec-fetch-site'] === 'cross-site' || (req.method === 'POST' && origin !== allowedOrigin)) {
+      return send(res, 403, { error: 'same-origin request required' })
+    }
+  }
   const session = readSession(req)
   const ctx = sessionCtx(session)
   const denied = authorize(route.auth, session, ctx)
@@ -173,9 +188,11 @@ const server = createServer(async (req, res) => {
   }
 
   try {
+    if (route.reward && (!body || typeof body !== 'object' || Array.isArray(body))) return send(res, 400, { error: 'JSON object required' })
     await route.handler({ req, res, body, params, session, ctx, ip: getClientIp(req) })
   } catch (err) {
-    console.error('[handler error]', err)
+    if (route.reward) console.error('[reward handler error]')
+    else console.error('[handler error]', err)
     send(res, 500, { error: 'internal error' })
   }
 })
@@ -189,7 +206,7 @@ setInterval(() => {
 }, 60 * 60 * 1000).unref?.()
 
 server.listen(PORT, HOST, () => {
-  console.log(`aarg.dev API listening on http://${HOST}:${PORT}`)
+  console.log(`aarg.dev API listening on http://${HOST}:${server.address().port}`)
 })
 
 export { server }

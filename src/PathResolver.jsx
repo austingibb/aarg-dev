@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Screen, Window, Prompt, Button, Notice } from './terminal.jsx'
 import { getShortLink } from './api.js'
 import ClipView from './ClipView.jsx'
+import Reward from './Reward.jsx'
 
 /* Named routes are matched before this component. Other root paths resolve
  * short link -> clip -> missing; /s/:path is short-link-only. */
@@ -21,7 +22,9 @@ export default function PathResolver({ shortOnly = false }) {
     setStatus('loading')
     getShortLink(path)
       .then((link) => {
-        if (requested.current === key) window.location.replace(link.target_url)
+        if (requested.current !== key) return
+        if (link.kind === 'reward') setStatus('reward')
+        else window.location.replace(link.target_url)
       })
       .catch((error) => {
         if (requested.current === key) setStatus(error.status === 404 ? (shortOnly ? 'missing' : 'clip') : 'error')
@@ -29,6 +32,7 @@ export default function PathResolver({ shortOnly = false }) {
   }, [path, shortOnly])
 
   if (status === 'clip') return <ClipView fallbackMissing />
+  if (status === 'reward') return <Reward key={path} slug={path} />
 
   return (
     <Screen align="top" max="48rem">

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Screen, Window, Prompt, Field, Button, Notice, Confirm } from './terminal.jsx'
 import { useAuth } from './auth.js'
+import RewardAdmin from './RewardAdmin.jsx'
 import {
   adminLogin, adminLogout,
   listWhitelist, addWhitelist, removeWhitelist,
@@ -84,7 +85,7 @@ function AdminConsole({ user, refresh, navigate }) {
   // ClipView's "‹ admin console" back link passes { section: 'clips' } so the
   // console reopens on the tab you left from.
   const requestedSection = useLocation().state?.section
-  const initialSection = ['whitelist', 'clips', 'short-links'].includes(requestedSection) ? requestedSection : 'whitelist'
+  const initialSection = ['whitelist', 'clips', 'short-links', 'reward'].includes(requestedSection) ? requestedSection : 'whitelist'
   const [section, setSection] = useState(initialSection)
   const [wl, setWl] = useState([])
   const [clips, setClips] = useState([])
@@ -121,10 +122,11 @@ function AdminConsole({ user, refresh, navigate }) {
         </div>
         <hr className="tui-sep" />
 
-        <div className="flex">
+        <div className="flex flex-wrap">
           <SectionTab active={section === 'whitelist'} onClick={() => setSection('whitelist')} label="whitelist" />
           <SectionTab active={section === 'clips'} onClick={() => setSection('clips')} label="clips" />
           <SectionTab active={section === 'short-links'} onClick={() => setSection('short-links')} label="short urls" />
+          <SectionTab active={section === 'reward'} onClick={() => setSection('reward')} label="reward" />
         </div>
         <hr className="tui-sep" />
 
@@ -133,6 +135,7 @@ function AdminConsole({ user, refresh, navigate }) {
           {section === 'whitelist' && <WhitelistSection wl={wl} reload={load} />}
           {section === 'clips' && <ClipsSection clips={clips} reload={load} />}
           {section === 'short-links' && <ShortLinksSection links={shortLinks} reload={load} />}
+          {section === 'reward' && <RewardAdmin />}
         </div>
 
         <hr className="tui-sep" />

@@ -11,6 +11,7 @@ import {
 } from './auth.js'
 import { verifyTotp } from './totp.js'
 import { randomInt } from 'node:crypto'
+import { rewardStore } from './reward-handlers.js'
 
 const CLIP_TTL = (Number(process.env.CLIP_TTL_SECONDS) || 86400) * 1000
 const CLIP_MAX_BYTES = 200 * 1024
@@ -199,6 +200,7 @@ export function adminDeleteShortLink({ res, params }) {
     return send(res, 400, { error: 'invalid path' })
   }
   if (!SHORT_PATH_RE.test(path)) return send(res, 400, { error: 'invalid path' })
+  if (rewardStore.matches(path)) return send(res, 409, { error: 'physical reward link is protected' })
   stmt.deleteShortLink.run(path)
   return send(res, 200, { ok: true })
 }
@@ -241,7 +243,7 @@ export function createShortLink({ res, body, ip }) {
       db.exec('ROLLBACK')
       return send(res, 507, { error: 'could not allocate a short path, retry' })
     }
-    if (stmt.shortLinkExists.get(path)) {
+    if (stmt.shortLinkExists.get(path) || rewardStore.matches(path)) {
       db.exec('ROLLBACK')
       return send(res, 409, { error: 'short path already in use' })
     }
@@ -269,6 +271,10 @@ export function resolveShortLink({ res, params }) {
   let path
   try { path = decodeURIComponent(String(params.path || '')) } catch { return send(res, 404, { error: 'no such short link' }) }
   if (!SHORT_PATH_RE.test(path)) return send(res, 404, { error: 'no such short link' })
+  if (rewardStore.matches(path)) {
+    res.setHeader('Cache-Control', 'no-store')
+    return send(res, 200, { kind: 'reward' })
+  }
 
   const now = Date.now()
   db.exec('BEGIN IMMEDIATE')
@@ -392,6 +398,7 @@ export function createClip({ res, body, ctx }) {
 
   if (path) {
     if (!CLIP_PATH_RE.test(path)) return send(res, 400, { error: 'invalid path' })
+    if (rewardStore.matches(path)) return send(res, 409, { error: 'physical reward link is protected' })
     const existing = stmt.getLiveClip.get(path, now)
     if (replacing) {
       if (!existing) return send(res, 404, { error: 'clip to replace no longer exists' })

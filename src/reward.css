@@ -1,0 +1,66 @@
+.reward-world { min-height:100vh; background:#fff6d5; color:#272018; font-family:Arial,Helvetica,sans-serif; overflow-x:clip; }
+.reward-world * { box-sizing:border-box; }
+.reward-world button, .reward-world input, .reward-world textarea { font:inherit; }
+.reward-world button { cursor:pointer; }
+.reward-world button:disabled { cursor:wait; opacity:.65; }
+.reward-world button:focus-visible, .reward-world a:focus-visible, .reward-world input:focus-visible, .reward-world textarea:focus-visible { outline:4px solid #155dfc; outline-offset:4px; }
+.reward-ticker { background:#27133e; color:#faff00; padding:9px; font-size:13px; font-weight:900; letter-spacing:3px; white-space:nowrap; overflow:hidden; }
+.reward-ticker span { display:block; animation:reward-marquee 22s linear infinite; }
+.reward-header { max-width:1200px; margin:auto; display:flex; justify-content:space-between; align-items:center; gap:20px; padding:24px; }
+.reward-brand { font-size:38px; font-weight:1000; font-style:italic; color:#e43817; text-decoration:none; line-height:1; }
+.reward-brand span { font-size:14px; vertical-align:top; }
+.reward-brand small { display:block; font-size:10px; font-style:normal; color:#5a3c25; letter-spacing:1px; margin-top:7px; }
+.reward-alpha { background:white; padding:9px 12px; border:2px solid #272018; box-shadow:3px 3px #272018; font-size:11px; font-weight:800; }
+.reward-strip { background:#f44224; color:white; text-align:center; padding:10px; font-size:12px; font-weight:900; letter-spacing:2px; }
+.reward-stage { position:relative; max-width:1100px; margin:auto; padding:38px 22px 60px; text-align:center; background-image:radial-gradient(#efbf7140 1.5px,transparent 1.5px); background-size:18px 18px; }
+.reward-coin { margin:0 auto 18px; background:linear-gradient(135deg,#fff281,#edb529); border:7px double #98720e; width:92px; height:92px; border-radius:50%; display:grid; place-items:center; font-size:60px; font-weight:900; color:#8a6106; box-shadow:6px 7px 0 #eec54c66; transform:rotate(-12deg); animation:reward-bob 3s ease-in-out infinite; }
+.reward-sticker { position:absolute; top:40px; right:6%; border:3px solid #291738; border-radius:50%; width:110px; height:110px; padding:25px 4px; font-weight:1000; font-size:25px; background:#d9ff43; transform:rotate(14deg); box-shadow:4px 4px #291738; }
+.reward-sticker small { display:block; font-size:10px; }
+.reward-eyebrow { font-size:12px; letter-spacing:1.5px; text-transform:uppercase; font-weight:700; }
+.reward-stage h1 { font-size:clamp(35px,7vw,78px); line-height:.98; letter-spacing:-3px; font-weight:1000; margin:16px auto; max-width:850px; color:#ee391e; text-shadow:3px 3px #ffcb49; }
+.reward-subtitle { font-size:15px; margin:20px 0 30px; }
+.reward-card { position:relative; max-width:570px; margin:24px auto; padding:30px; text-align:left; background:white; border:3px solid #291738; border-radius:6px; box-shadow:8px 8px #291738; }
+.reward-label { display:inline-block; background:#f2e6ff; color:#672298; padding:6px 9px; font-size:10px; font-weight:900; letter-spacing:1px; }
+.reward-card h2 { font-weight:900; font-size:clamp(25px,4vw,35px); letter-spacing:-1px; line-height:1.1; margin:17px 0; }
+.reward-card p { font-size:14px; line-height:1.6; margin:12px 0; }
+.reward-card label { display:block; font-size:12px; font-weight:800; margin:20px 0 8px; }
+.reward-card input, .reward-card textarea { width:100%; color:#272018; border:2px solid #272018; background:#fffbea; border-radius:3px; padding:13px; }
+.reward-card textarea { resize:vertical; font-family:monospace; font-size:16px; }
+.reward-cta { display:block; width:100%; background:#ed391f; color:white; border:2px solid #291738; border-radius:4px; padding:17px 12px; margin:20px 0 15px; font-size:16px!important; font-weight:900!important; box-shadow:4px 4px #291738; transition:transform .15s; }
+.reward-cta:hover:not(:disabled) { transform:translate(-2px,-2px); background:#c72b15; }
+.reward-card small, .reward-card .reward-fine { font-size:11px; line-height:1.6; color:#615646; }
+.reward-price { display:flex; flex-direction:column; align-items:center; margin:15px 0; }
+.reward-price s { font-size:18px; color:#746347; }
+.reward-price strong { font-size:clamp(50px,9vw,94px); line-height:1.15; font-weight:1000; letter-spacing:-4px; }
+.reward-price span { background:#dbff47; padding:5px 12px; font-size:11px; font-weight:900; transform:rotate(-2deg); }
+.reward-copy { background:#ddff49; border:2px solid #291738; padding:9px 18px; margin-top:12px; font-weight:800!important; }
+.reward-timer { background:#fff0db; padding:8px; border-left:4px solid #e43817; }
+.reward-offers { display:flex; gap:16px; margin:42px auto 0; max-width:880px; }
+.reward-offer { position:relative; flex:1; background:#f0dfff; border:2px solid #291738; box-shadow:4px 4px #291738; padding:22px 16px; transform:rotate(-2deg); text-align:left; animation:reward-pop .4s ease-out both; }
+.reward-offer:nth-child(2) { background:#dcff55; transform:rotate(2deg); animation-delay:.2s; }
+.reward-offer:nth-child(3) { background:#ffd1bc; animation-delay:.4s; }
+.reward-offer button { position:absolute; right:4px; top:2px; background:transparent; border:0; width:32px; height:32px; font-size:25px; }
+.reward-offer small { font-size:9px; font-weight:900; letter-spacing:1px; }
+.reward-offer h3 { font-size:20px; font-weight:900; line-height:1.1; margin:14px 0 8px; }
+.reward-offer p { font-size:12px; line-height:1.4; }
+.reward-coupon { background:#e5ff73; border:3px dashed #291738; padding:20px; text-align:center; margin:24px 0; transform:rotate(-2deg); }
+.reward-coupon strong { display:block; font-size:48px; font-weight:1000; }
+.reward-coupon span { font-size:12px; font-weight:900; letter-spacing:2px; }
+.reward-home { font-size:13px; text-decoration:underline; color:#612497; }
+.reward-error { max-width:570px; margin:20px auto; padding:14px; border:2px solid #aa210b; background:#fff; color:#aa210b; font-weight:700; font-size:14px; }
+.reward-footer { padding:25px; text-align:center; background:#291738; color:#eee3f8; font-size:11px; line-height:1.8; }
+.reward-popup { position:fixed; z-index:20; bottom:20px; right:20px; width:min(310px,calc(100vw - 30px)); background:#ffed56; border:4px solid #771bab; box-shadow:7px 7px #291738; padding:24px 18px 18px; text-align:center; animation:reward-pop .45s ease-out; }
+.reward-popup span { display:block; font-size:12px; font-weight:900; }
+.reward-popup strong { display:block; font-size:28px; font-weight:1000; line-height:1.1; margin:12px 0; color:#771bab; }
+.reward-popup p { font-size:12px; }
+.reward-popup-close { position:absolute; right:3px; top:0; width:30px; height:30px; border:0; background:transparent; font-size:24px!important; }
+.reward-confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.reward-confetti i { position:absolute; top:-25px; left:calc(var(--piece) * 5.5%); width:9px; height:16px; background:#e43817; animation:reward-fall 6s linear infinite; animation-delay:calc(var(--piece) * -.37s); }
+.reward-confetti i:nth-child(3n) { background:#771bab; }
+.reward-confetti i:nth-child(3n + 1) { background:#a6c717; }
+@keyframes reward-fall { to { transform:translateY(1100px) rotate(680deg); } }
+@keyframes reward-bob { 50% { transform:translateY(-7px) rotate(8deg); } }
+@keyframes reward-pop { from { opacity:0; translate:0 25px; } to { opacity:1; translate:0 0; } }
+@keyframes reward-marquee { to { transform:translateX(-25%); } }
+@media (max-width:600px) { .reward-header { padding:18px 15px; } .reward-brand { font-size:29px; } .reward-alpha { max-width:125px; font-size:9px; } .reward-sticker { width:73px; height:73px; font-size:19px; padding:13px 2px; right:5%; } .reward-sticker small { font-size:7px; } .reward-stage { padding-inline:15px; } .reward-card { padding:21px; box-shadow:5px 5px #291738; } .reward-offers { flex-direction:column; gap:22px; padding:0 6px; } .reward-stage h1 { letter-spacing:-1.5px; } }
+@media (prefers-reduced-motion:reduce) { .reward-world *, .reward-world *::before, .reward-world *::after { animation:none!important; transition:none!important; } }

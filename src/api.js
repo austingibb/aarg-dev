@@ -84,3 +84,10 @@ export const createShortLink = (url, path, lifetime) =>
   api('POST', '/api/short-links', { url, ...(path ? { path } : {}), lifetime })
 export const getShortLink = (path) =>
   api('GET', `/api/short-links/${encodeURIComponent(path)}`)
+
+export const getRewardStatus = (slug) => api('GET', `/api/reward/${encodeURIComponent(slug)}/status`)
+export const unlockReward = (slug, password) => api('POST', `/api/reward/${encodeURIComponent(slug)}/unlock`, { password })
+export const claimReward = (slug) => api('POST', `/api/reward/${encodeURIComponent(slug)}/claim`)
+export const acknowledgeReward = (slug) => api('POST', `/api/reward/${encodeURIComponent(slug)}/acknowledge`)
+export const getAdminReward = () => api('GET', '/api/admin/reward')
+export const armReward = () => api('POST', '/api/admin/reward/arm')

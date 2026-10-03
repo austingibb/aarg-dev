@@ -19,6 +19,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-check
+SCAVENGER_HUNT.md
 *.local
 
 # Editor directories and files

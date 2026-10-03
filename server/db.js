@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const DATA_DIR = resolve(process.cwd(), 'data')
+const DATA_DIR = resolve(process.env.AARG_DATA_DIR || resolve(process.cwd(), 'data'))
 mkdirSync(DATA_DIR, { recursive: true })
 
 export const db = new DatabaseSync(resolve(DATA_DIR, 'aarg.db'))

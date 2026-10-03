@@ -111,14 +111,14 @@ export function readSession(req) {
 }
 
 /* ---------------- rate limiter (in-memory, single process) ----------------
- * Buckets keyed on a string; each bucket = array of recent hit timestamps.
+ * Buckets keyed on a string; each hit carries its own expiry.
  * Returns true if allowed (and records the hit), false if over the limit. */
 const buckets = new Map()
 const SWEEP = 5 * 60 * 1000
 setInterval(() => {
   const now = Date.now()
   for (const [k, hits] of buckets) {
-    const fresh = hits.filter((t) => now - t < SWEEP)
+    const fresh = hits.filter((hit) => hit.expires > now)
     if (fresh.length === 0) buckets.delete(k)
     else buckets.set(k, fresh)
   }
@@ -126,9 +126,9 @@ setInterval(() => {
 
 export function rateHit(key, max, windowMs) {
   const now = Date.now()
-  const hits = (buckets.get(key) || []).filter((t) => now - t < windowMs)
+  const hits = (buckets.get(key) || []).filter((hit) => hit.expires > now)
   if (hits.length >= max) return false
-  hits.push(now)
+  hits.push({ expires: now + windowMs })
   buckets.set(key, hits)
   return true
 }

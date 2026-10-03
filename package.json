@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:check": "vite build --outDir dist-check",
+    "test:reward": "node --test tests/reward-store.test.js tests/reward-api.test.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "api": "node --env-file=.env server/index.js"
