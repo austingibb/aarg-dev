@@ -21,12 +21,17 @@ function exists(params, res) {
   send(res, 404, { error: 'not found' })
   return false
 }
-export function rewardStatus({ req, res, params }) {
-  if (!exists(params, res)) return
-  send(res, 200, rewardStore.status(hashFromRequest(req)))
+function accountId(ctx) {
+  return ctx?.email ? stmt.getUserByEmail.get(ctx.email)?.id ?? null : null
 }
-export function rewardUnlock({ req, res, params, body, ip }) {
+export function rewardStatus({ req, res, params, ctx }) {
   if (!exists(params, res)) return
+  send(res, 200, rewardStore.status(hashFromRequest(req), accountId(ctx)))
+}
+export function rewardUnlock({ req, res, params, body, ip, ctx }) {
+  if (!exists(params, res)) return
+  const userId = accountId(ctx)
+  if (rewardStore.snapshot().state === 'armed' && !userId) return send(res, 401, { code: 'login_required', error: 'log in to continue' })
   const bucket = createHmac('sha256', process.env.SESSION_SECRET).update(String(ip)).digest('hex')
   if (!rateHit(`reward:${bucket}`, 10, 15 * 60 * 1000) || !rateHit('reward:global', 100, 60 * 1000)) {
     return send(res, 429, { error: 'too many guesses; try again later' })
@@ -35,21 +40,24 @@ export function rewardUnlock({ req, res, params, body, ip }) {
     return send(res, 401, { error: 'the battery tray knows the password' })
   }
   let hash = hashFromRequest(req)
-  const raw = rewardStore.issue(hash)
+  const raw = rewardStore.issue(hash, userId)
   if (raw) {
     hash = tokenHash(raw)
     res.setHeader('Set-Cookie', `${COOKIE}=${raw}; Max-Age=${(TOKEN_MS + RECOVERY_MS) / 1000}; Path=/; HttpOnly; Secure; SameSite=Strict`)
   }
-  send(res, 200, rewardStore.status(hash))
+  send(res, 200, rewardStore.status(hash, userId))
 }
-export function rewardClaim({ req, res, params }) {
+export function rewardClaim({ req, res, params, ctx }) {
   if (!exists(params, res)) return
-  const result = rewardStore.claim(hashFromRequest(req))
-  send(res, result.state === 'locked' ? 401 : 200, result.state === 'locked' ? { error: 'enter the password first' } : result)
+  const userId = accountId(ctx)
+  if (!userId) return send(res, 401, { code: 'login_required', error: 'log in to continue' })
+  send(res, 200, rewardStore.claim(hashFromRequest(req), userId))
 }
-export function rewardAcknowledge({ req, res, params }) {
+export function rewardAcknowledge({ req, res, params, ctx }) {
   if (!exists(params, res)) return
-  if (!rewardStore.acknowledge(hashFromRequest(req))) return send(res, 403, { error: 'not the winning browser' })
+  const userId = accountId(ctx)
+  if (!userId) return send(res, 401, { code: 'login_required', error: 'log in to continue' })
+  if (!rewardStore.acknowledge(hashFromRequest(req), userId)) return send(res, 403, { error: 'use the winning account and browser' })
   send(res, 200, { state: 'saved' })
 }
 export function adminReward({ res }) {

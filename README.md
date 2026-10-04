@@ -93,12 +93,26 @@ in client code or listed in the public shortener. The password verifier is
 server-side. The owner-only `SCAVENGER_HUNT.md` is ignored by Git and is not a
 build asset. Keep that document privately alongside the deployment handoff.
 
-Password entry issues an HttpOnly browser cookie. The first successful Claim
-atomically reserves the reward. Only that browser token may retrieve the
-placeholder for one hour from the original claim. Acknowledgment ends access
-early. Neither timeout nor acknowledgment allows a second winner or rearming.
-Unclaimed eligibility cookies permit claiming for 24 hours; the winning
-reservation has its own fixed one-hour deadline. Clearing cookies loses access.
+While armed, the space-themed entrance requires signup/login through the existing
+site account flow before it accepts the battery password. Any existing account
+with an active login qualifies; no whitelist or new email-verification step is
+required. Admin-only sessions are not user accounts. Signup returns visitors to
+the entrance. Password entry issues an account-bound HttpOnly browser cookie.
+The first successful Claim atomically reserves the reward for that account and
+token. Both are required to retrieve the placeholder during the original hour.
+Logout, switching accounts or deleting the account prevents retrieval.
+
+When reserved, closed or initially disarmed, guests still see the space entrance
+and must enter the password to see the carnival consolation. A view-only cookie
+cannot claim a reward, even if an admin later arms it. This preserves the surprise
+without promising an available reward after someone has claimed it.
+
+Acknowledgment ends access early. Neither timeout nor acknowledgment allows a
+second winner or rearming. Unclaimed eligibility cookies permit claiming for
+24 hours; the winning reservation has its own fixed one-hour deadline. Clearing
+cookies loses access. Account binding adds nullable user IDs and token purposes
+to the reward tables; legacy anonymous eligibility tokens cannot claim. An
+active legacy recovery window blocks migration until its deadline has passed.
 
 Reward tables are additive to the existing SQLite database. No npm dependencies
 or external wallet APIs are added. The API remains single-process Node behind

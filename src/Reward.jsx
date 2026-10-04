@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getRewardStatus, unlockReward, claimReward, acknowledgeReward } from './api.js'
+import RewardEntrance from './RewardEntrance.jsx'
 import './reward.css'
 
 const OFFERS = [
   ['EXCLUSIVE OFFER', 'You opened a battery tray.', 'Most people never make it this far.'],
-  ['FREE SHIPPING', 'Delivered directly to your eyeballs.', 'Handling fee: one unusually long word.'],
+  ['FREE SHIPPING', 'Delivered directly to your eyeballs.', 'Handling fee: a little curiosity.'],
   ['TRUST US*', 'Definitely a website.', '*Independently verified by this website.'],
 ]
 
@@ -34,7 +35,7 @@ export default function Reward({ slug }) {
       const data = await getRewardStatus(slug)
       if (alive.current && id === request.current) { apply(data); setError('') }
     } catch {
-      if (alive.current && id === request.current) setError('The prize department is temporarily unreachable. Try again.')
+      if (alive.current && id === request.current) setError('The signal is temporarily out of reach. Try again.')
     }
   }, [slug, apply])
 
@@ -91,9 +92,14 @@ export default function Reward({ slug }) {
       const data = await action()
       if (alive.current && id === request.current) apply(data)
     } catch (e) {
-      if (alive.current && id === request.current) setError(e.error || 'Something went sideways. Your winning browser can retry within the original hour.')
+      if (alive.current && id === request.current) {
+        if (e.code === 'login_required') {
+          setScreen({ state: 'loading' })
+          await refresh()
+        } else setError(e.error || 'Something went sideways. Your winning account and browser can retry within the original hour.')
+      }
     } finally {
-      if (alive.current && id === request.current) setBusy(false)
+      if (alive.current) setBusy(false)
     }
   }
 
@@ -106,6 +112,11 @@ export default function Reward({ slug }) {
 
   const unlocked = screen.state === 'available' || screen.state === 'winner'
   const finished = screen.state === 'consolation' || screen.state === 'saved'
+  if (!unlocked && !finished) return <RewardEntrance
+    slug={slug} screen={screen} password={password} setPassword={setPassword}
+    busy={busy} error={error} onRetry={refresh}
+    onUnlock={() => { act(() => unlockReward(slug, password)); setPassword('') }}
+  />
   return (
     <main className="reward-world">
       <div className="reward-ticker"><span>VERY WOW • SMALL PRINT, HUGE DOGE • BATTERIES NOT INCLUDED • VERY WOW • SMALL PRINT, HUGE DOGE •</span></div>
@@ -123,18 +134,6 @@ export default function Reward({ slug }) {
         <h1>{finished ? 'OH NO. MUCH LATE.' : screen.state === 'winner' ? 'MUCH WIN. SUCH YOU.' : 'YOU LOOKED INSIDE?!'}</h1>
         <p className="reward-subtitle">Some ideas are best kept inside. This one escaped marketing.</p>
 
-        {screen.state === 'loading' && <div className="reward-card"><p role="status">Contacting the department of improbable prizes…</p><button onClick={refresh}>Try again</button></div>}
-
-        {screen.state === 'locked' && <form className="reward-card" onSubmit={(event) => { event.preventDefault(); act(() => unlockReward(slug, password)); setPassword('') }}>
-          <span className="reward-label">YOUR EXTREMELY EXCLUSIVE ACCESS CODE</span>
-          <h2>The battery knows.</h2>
-          <p>Enter the word from the battery tray. You have earned the right to be suspicious.</p>
-          <label htmlFor="reward-password">Secret word</label>
-          <input id="reward-password" type="password" value={password} maxLength={128} autoComplete="off" spellCheck={false} onChange={(event) => setPassword(event.target.value)} required />
-          <button className="reward-cta" disabled={busy || !password}>{busy ? 'CONSULTING THE BATTERY…' : 'UNLOCK QUESTIONABLE DEALS →'}</button>
-          <small>No account. No email. Just an impressive commitment to opening things.</small>
-        </form>}
-
         {unlocked && <>
           <div className="reward-price"><s>0 DOGE</s><strong>256 DOGE</strong><span>FOR THE LOW PRICE OF CURIOSITY*</span></div>
           <div className="reward-card reward-prize">
@@ -143,7 +142,7 @@ export default function Reward({ slug }) {
               <h2>Congratulations, battery inspector.</h2>
               <p>Your qualifications have been reviewed by absolutely nobody.</p>
               <button className="reward-cta" disabled={busy} onClick={() => act(() => claimReward(slug))}>{busy ? 'CHECKING THE PRIZE VAULT…' : 'CLAIM YOUR 256 DOGE'}</button>
-              <p className="reward-fine">*Alpha test: you will receive a fake phrase, not cryptocurrency. First successful claim wins. Keep this browser’s cookies to return within one hour.</p>
+              <p className="reward-fine">*Alpha test: you will receive a fake phrase, not cryptocurrency. First successful claim wins. Keep this browser’s cookies and sign in to the same account to return within one hour.</p>
             </> : <>
               <span className="reward-label">RESERVED FOR THIS BROWSER</span>
               <h2>You won the alpha prize!</h2>

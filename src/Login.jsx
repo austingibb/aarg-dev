@@ -10,9 +10,12 @@ export default function Login() {
   const navigate = useNavigate()
   const { refresh } = useAuth()
   const [params] = useSearchParams()
-  const next = params.get('next') || '/'
+  const candidate = params.get('next') || '/'
+  // Only local paths; reject protocol-relative URLs and browser slash normalization.
+  const unsafe = [...candidate].some((character) => character === '\\' || character.charCodeAt(0) < 32)
+  const next = candidate.startsWith('/') && !candidate.startsWith('//') && !unsafe ? candidate : '/'
 
-  const [mode, setMode] = useState('login')        // 'login' | 'signup'
+  const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [err, setErr] = useState('')

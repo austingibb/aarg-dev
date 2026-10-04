@@ -12,8 +12,8 @@ const secret = 'reward-alpha-test-session-secret-not-production'
 const password = randomBytes(24).toString('base64url')
 const salt = randomBytes(16)
 const passwordHash = ['scrypt', 16384, 8, 1, salt.toString('base64'), scryptSync(password, salt, 64).toString('base64')].join('$')
-function adminCookie() {
-  const body = Buffer.from(JSON.stringify({ admin: 1, exp: Date.now() + 60000 })).toString('base64url')
+function adminCookie(payload = { admin: 1, exp: Date.now() + 60000 }) {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
   const mac = createHmac('sha256', secret).update(Buffer.from(body, 'base64url')).digest('base64url')
   return `aarg_sess=${body}.${mac}`
 }
@@ -61,16 +61,30 @@ test('HTTP gate, concurrent claims, restart recovery and acknowledgment', async 
   assert.equal((await api.call('/api/admin/reward/arm', { method: 'POST', cookie: admin, requestOrigin: 'https://evil.invalid' })).status, 403)
   assert.equal((await api.call('/api/admin/reward/arm', { method: 'POST', cookie: admin })).status, 200)
   assert.equal((await api.call(`${root}/claim`, { method: 'POST' })).status, 401)
-  assert.equal((await api.call(`${root}/unlock`, { method: 'POST', body: { password: 'wrong' } })).status, 401)
-  const unlock = () => api.call(`${root}/unlock`, { method: 'POST', body: { password } })
-  const a = await unlock()
-  const b = await unlock()
+  assert.equal((await api.call(`${root}/status`)).data.state, 'login_required')
+  assert.equal((await api.call(`${root}/unlock`, { method: 'POST', body: { password } })).status, 401)
+  assert.equal((await api.call(`${root}/unlock`, { method: 'POST', cookie: admin, body: { password } })).status, 401)
+  const missingAccount = adminCookie({ email: 'missing@example.invalid', admin: 0, exp: Date.now() + 60000 })
+  assert.equal((await api.call(`${root}/unlock`, { method: 'POST', cookie: missingAccount, body: { password } })).status, 401)
+  const expiredAccount = adminCookie({ email: 'a@example.invalid', admin: 0, exp: Date.now() - 1 })
+  assert.equal((await api.call(`${root}/unlock`, { method: 'POST', cookie: expiredAccount, body: { password } })).status, 401)
+  async function register(email) {
+    const account = await api.call('/api/auth/signup', { method: 'POST', body: { email, password } })
+    assert.equal(account.status, 200)
+    const unlocked = await api.call(`${root}/unlock`, { method: 'POST', cookie: account.cookie, body: { password } })
+    assert.equal(unlocked.data.state, 'available')
+    return { cookie: `${account.cookie}; ${unlocked.cookie}`, accountCookie: account.cookie, tokenCookie: unlocked.cookie }
+  }
+  const a = await register('a@example.invalid')
+  const b = await register('b@example.invalid')
   assert.ok(a.cookie && b.cookie && a.cookie !== b.cookie)
   const claims = await Promise.all([a, b].map(({ cookie }) => api.call(`${root}/claim`, { method: 'POST', cookie })))
   assert.equal(claims.filter((r) => r.data.phrase).length, 1)
   const winner = claims[0].data.phrase ? a : b
   const loser = winner === a ? b : a
   const winningResult = claims.find((r) => r.data.phrase)
+  assert.equal((await api.call(`${root}/claim`, { method: 'POST', cookie: winner.tokenCookie })).status, 401)
+  assert.equal((await api.call(`${root}/claim`, { method: 'POST', cookie: `${loser.accountCookie}; ${winner.tokenCookie}` })).data.phrase, undefined)
   assert.match(winningResult.data.phrase, /NOT-A-WALLET/)
   assert.equal(winningResult.cache, 'no-store')
   await api.stop()
@@ -90,6 +104,7 @@ test('HTTP gate, concurrent claims, restart recovery and acknowledgment', async 
   const clip = await api.call('/api/clip', { method: 'POST', cookie: admin, body: { path: 'alpha-clip', content: 'regression fixture' } })
   assert.equal(clip.status, 200)
   assert.equal((await api.call('/api/clip/alpha-clip', { cookie: admin })).data.content, 'regression fixture')
+  assert.equal((await api.call(`${root}/status`)).data.state, 'password_required')
   for (let i = 0; i < 10; i++) {
     assert.equal((await api.call(`${root}/unlock`, { method: 'POST', body: { password: 'wrong' } })).status, 401)
   }

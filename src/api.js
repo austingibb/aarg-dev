@@ -28,7 +28,7 @@ async function parseResponse(res) {
     try { data = JSON.parse(text) }
     catch { data = { error: text } }
   }
-  if (!res.ok) throw { status: res.status, error: (data && data.error) || 'request failed' }
+  if (!res.ok) throw { status: res.status, error: (data && data.error) || 'request failed', code: data?.code }
   return data
 }
 
