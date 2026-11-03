@@ -39,6 +39,10 @@ DELETE FROM short_link_creations;
 
 ## Dev
 
+The standalone SteamDB scraper prototype lives in [`scraper/`](scraper/README.md).
+It has separate dependencies, a local cache API, and Windows startup scripts.
+See its README for the current live-source blocker and prototype limitations.
+
 ```bash
 npm install
 npm run dev

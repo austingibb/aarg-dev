@@ -1,0 +1,14 @@
+{
+  "name": "aarg-steamdb-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env index.js",
+    "test": "node --test tests/*.test.js",
+    "status": "node --env-file-if-exists=.env cli.js status"
+  },
+  "dependencies": {
+    "playwright-core": "1.64.0"
+  }
+}
