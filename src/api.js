@@ -49,9 +49,9 @@ export const adminListShortLinks = ()      => api('GET', '/api/admin/short-links
 export const adminDeleteShortLink = (path) => api('DELETE', `/api/admin/short-links/${encodeURIComponent(path)}`)
 
 export const getClip       = (path)        => api('GET',  `/api/clip/${encodeURIComponent(path)}`)
-export const createClip    = (path, content, withFile = false, replace = false) =>
+export const createClip    = (path, content, withFile = false, replace = false, lifetime = '1d') =>
   api('POST', '/api/clip', {
-    ...(path ? { path } : {}), content,
+    ...(path ? { path } : {}), content, lifetime,
     ...(withFile ? { withFile: true } : {}),
     ...(replace ? { replace: true } : {}),
   })

@@ -236,7 +236,7 @@ function ClipsSection({ clips, reload }) {
           <Link to={`/clip/${c.path}`} state={{ from: 'admin' }} style={{ color: 'var(--cyan)' }}>/{c.path}</Link>
           <span className="text-xs" style={{ color: 'var(--dim)' }}>by {c.created_by}</span>
           <span className="text-xs ml-auto" style={{ color: 'var(--dim)' }}>
-            expires {new Date(c.expires_at).toLocaleString()}
+            {c.expires_at == null ? 'never expires' : `expires ${new Date(c.expires_at).toLocaleString()}`}
           </span>
           <Button variant="danger" onClick={() => del(c.path)}>delete</Button>
         </div>

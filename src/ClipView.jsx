@@ -80,7 +80,7 @@ export default function ClipView({ fallbackMissing = false }) {
           <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: 'var(--dim)' }}>
             <span>path: <span style={{ color: 'var(--fg)' }}>/{clip.path}</span></span>
             <span>·</span>
-            <span>expires in {expiresIn(clip.expires_at)}</span>
+            <span>{clip.expires_at == null ? 'never expires' : `expires in ${expiresIn(clip.expires_at)}`}</span>
           </div>
           {clip.content ? (
             <pre className="tui-input" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto' }}>
@@ -152,8 +152,10 @@ function clipUrl(content) {
 function expiresIn(exp) {
   const ms = exp - Date.now()
   if (ms <= 0) return 'expired'
-  const h = Math.floor(ms / 3600000)
+  const d = Math.floor(ms / 86400000)
+  const h = Math.floor((ms % 86400000) / 3600000)
   const m = Math.floor((ms % 3600000) / 60000)
+  if (d > 0) return `${d}d ${h}h`
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`
 }

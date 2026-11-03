@@ -5,6 +5,7 @@ import { Prompt, Field, TextArea, Button, Notice } from './terminal.jsx'
 import { useAuth } from './auth.js'
 import { createClip, uploadClipFile, deleteClip } from './api.js'
 import { fmtSize } from './format.js'
+import { LIFETIMES } from '../shared/lifetimes.js'
 
 const FILE_MAX_BYTES = 5 * 1024 * 1024
 
@@ -24,6 +25,7 @@ export default function Clip() {
   const [path, setPath] = useState(() => replacePath || params.get('path') || '')
   const [content, setContent] = useState('')
   const [file, setFile] = useState(null)         // File to attach, or null
+  const [lifetime, setLifetime] = useState('1d')
   const [err, setErr] = useState('')
   const [fileErr, setFileErr] = useState('')     // upload failed but clip exists
   const [busy, setBusy] = useState(false)
@@ -79,7 +81,7 @@ export default function Clip() {
     setCreated(null)
     setBusy(true)
     try {
-      const res = await createClip(path.trim().toLowerCase(), content, !!file, replacing)
+      const res = await createClip(path.trim().toLowerCase(), content, !!file, replacing, lifetime)
       if (file) {
         try {
           res.file = await uploadClipFile(res.path, file)
@@ -117,7 +119,7 @@ export default function Clip() {
   }
 
   return (
-    <Widget id="clip" tag="ephemeral · 24h">
+    <Widget id="clip" tag="ephemeral">
       <div className="px-6 pt-7 pb-4"><Prompt cmd={replacing ? `clip --replace ${replacePath}` : 'clip --new'} cursor /></div>
       <hr className="tui-sep" />
 
@@ -161,6 +163,13 @@ export default function Clip() {
           </div>
         </div>
 
+        <label className="tui-field">
+          <span className="tui-field-label">expires after</span>
+          <select className="tui-input" value={lifetime} onChange={(e) => setLifetime(e.target.value)}>
+            {LIFETIMES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+
         <div className="flex items-center gap-3">
           <Button
             onClick={submit}
@@ -169,7 +178,6 @@ export default function Clip() {
           >
             {replacing ? 'erase old clip and replace' : 'create clip'}
           </Button>
-          <span className="text-xs" style={{ color: 'var(--dim)' }}>expires in 24h</span>
         </div>
 
         <Notice kind="error">{err}</Notice>

@@ -3,13 +3,9 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Prompt, Field, Button, Notice } from './terminal.jsx'
 import { createShortLink } from './api.js'
+import { LIFETIMES as CLIP_LIFETIMES } from '../shared/lifetimes.js'
 
-const LIFETIMES = [
-  ['forever', 'forever'], ['1year', '1 year'], ['1month', '1 month'],
-  ['1week', '1 week'], ['1day', '1 day'], ['1hour', '1 hour'],
-  ['30min', '30 min'], ['10min', '10 min'], ['1min', '1 min'],
-  ['single', 'single use'],
-]
+const LIFETIMES = [...CLIP_LIFETIMES, ['single', 'single use']]
 
 export default function Shorten() {
   const navigate = useNavigate()
@@ -57,7 +53,7 @@ export default function Shorten() {
         <Field label="custom path (optional — blank = generated 4 characters)"
           value={path} onChange={setPath} placeholder="e.g. docs" onEnter={submit} />
         <label className="tui-field">
-          <span className="tui-field-label">survival length</span>
+          <span className="tui-field-label">expires after</span>
           <select className="tui-input" value={lifetime} onChange={(e) => setLifetime(e.target.value)}>
             {LIFETIMES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>

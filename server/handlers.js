@@ -12,8 +12,17 @@ import {
 import { verifyTotp } from './totp.js'
 import { randomInt } from 'node:crypto'
 import { rewardStore } from './reward-handlers.js'
+import { LIFETIMES } from '../shared/lifetimes.js'
 
-const CLIP_TTL = (Number(process.env.CLIP_TTL_SECONDS) || 86400) * 1000
+// Selectable lifetimes (shared/lifetimes.js). CLIP_TTL_SECONDS overrides the
+// clip default (1d) for testing.
+const CLIP_DEFAULT_LIFETIME = '1d'
+const CLIP_TTLS = new Map(LIFETIMES.map(([key, , ms]) => [key, ms]))
+if (Number(process.env.CLIP_TTL_SECONDS)) CLIP_TTLS.set(CLIP_DEFAULT_LIFETIME, Number(process.env.CLIP_TTL_SECONDS) * 1000)
+// clips.expires_at is NOT NULL, so "forever" is stored as a far-future sentinel
+// (keeps the `expires_at > now` live/purge queries unchanged) and sent as null.
+const CLIP_FOREVER = Number.MAX_SAFE_INTEGER
+const clipExpiry = (expiresAt) => (expiresAt >= CLIP_FOREVER ? null : expiresAt)
 const CLIP_MAX_BYTES = 200 * 1024
 export const FILE_MAX_BYTES = 5 * 1024 * 1024
 const CLIP_PATH_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -24,18 +33,8 @@ const SHORT_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456
 const SHORT_CREATION_LIMIT = 20
 const SHORT_WINDOW_MS = 24 * 60 * 60 * 1000
 const RESERVED_PATHS = new Set(['api', 'admin', 'blog', 'c', 'clip', 'login', 's', 'short'])
-const SHORT_TTLS = new Map([
-  ['forever', null],
-  ['1year', 365 * 24 * 60 * 60 * 1000],
-  ['1month', 30 * 24 * 60 * 60 * 1000],
-  ['1week', 7 * 24 * 60 * 60 * 1000],
-  ['1day', 24 * 60 * 60 * 1000],
-  ['1hour', 60 * 60 * 1000],
-  ['30min', 30 * 60 * 1000],
-  ['10min', 10 * 60 * 1000],
-  ['1min', 60 * 1000],
-  ['single', null],
-])
+// Same lifetimes as clips, plus single-use (expires_at null, deleted on first read).
+const SHORT_TTLS = new Map([...LIFETIMES.map(([key, , ms]) => [key, ms]), ['single', null]])
 
 export function send(res, status, obj) {
   const body = JSON.stringify(obj)
@@ -169,7 +168,7 @@ export function removeWhitelist({ res, params }) {
 export function adminListClips({ res }) {
   const now = Date.now()
   const rows = stmt.listLiveClips.all(now).map((r) => ({
-    path: r.path, created_by: r.created_by, created_at: r.created_at, expires_at: r.expires_at,
+    path: r.path, created_by: r.created_by, created_at: r.created_at, expires_at: clipExpiry(r.expires_at),
   }))
   return send(res, 200, rows)
 }
@@ -308,7 +307,7 @@ export function getClip({ res, params, ctx }) {
   }
   const file = stmt.getClipFileMeta.get(path) || null
   return send(res, 200, {
-    path: clip.path, content: clip.content, expires_at: clip.expires_at,
+    path: clip.path, content: clip.content, expires_at: clipExpiry(clip.expires_at),
     file: file ? { name: file.name, mime: file.mime, size: file.size } : null,
   })
 }
@@ -391,6 +390,9 @@ export function createClip({ res, body, ctx }) {
   }
   if (buf.length > CLIP_MAX_BYTES) return send(res, 413, { error: 'content too large (200 KB max)' })
 
+  const lifetime = String(body.lifetime || CLIP_DEFAULT_LIFETIME)
+  if (!CLIP_TTLS.has(lifetime)) return send(res, 400, { error: 'invalid lifetime' })
+
   let path = String(body.path || '').trim().toLowerCase()
   const replacing = body.replace === true
   const now = Date.now()
@@ -414,7 +416,8 @@ export function createClip({ res, body, ctx }) {
     if (!path) return send(res, 507, { error: 'could not allocate a short path, retry' })
   }
 
-  const expiresAt = now + CLIP_TTL
+  const ttl = CLIP_TTLS.get(lifetime)
+  const expiresAt = ttl == null ? CLIP_FOREVER : now + ttl
   if (replacing) {
     // Delete (including any attachment via ON DELETE CASCADE) and insert the
     // replacement atomically. Merely opening the replacement form does not
@@ -431,7 +434,7 @@ export function createClip({ res, body, ctx }) {
   } else {
     stmt.insertClip.run(path, content, ctx.email || 'anonymous', now, expiresAt)
   }
-  return send(res, 200, { path, url: `/clip/${path}`, expires_at: expiresAt, replaced: replacing })
+  return send(res, 200, { path, url: `/clip/${path}`, expires_at: clipExpiry(expiresAt), replaced: replacing })
 }
 
 /* ---------------- market data proxy ----------------

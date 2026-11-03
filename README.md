@@ -14,11 +14,11 @@ Personal website for [aarg.dev](https://aarg.dev). A minimal landing page with l
 - **Clip** — a cl1p.net-style paste utility at `/clip/<path>`, `/c/<path>`, or the
   short root form `/<path>` (named site pages take precedence): whitelisted logged-in
   users create a clip (custom path or generated short code), text stored locally with a
-  1-day TTL, viewable from any computer (after login) with a copy button. A clip can
+  selectable lifetime (5 min through 1 year, or forever; default 1 day), viewable from any computer (after login) with a copy button. A clip can
   carry one file attachment (max 5 MB, stored in SQLite, downloadable from the clip
   page, deleted with the clip). Both read and write require a whitelisted login.
 - **Short links** — public URL creation at `/short`, with generated 4-character
-  or custom paths and selectable lifetimes from one minute through forever (plus
+  or custom paths and the same selectable lifetimes as clips, 5 min through forever (plus
   single-use). `/<path>` checks short links before clips; `/s/<path>` is the
   unambiguous form. Creation permanently disables itself after 20 creations in
   a rolling 24-hour window until the database setting is reviewed and reset;
@@ -108,7 +108,7 @@ node scripts/generate-secrets.js --psk
 ```
 
 `.env` (gitignored) holds `API_PORT`, `SESSION_SECRET`, `TOTP_SECRET`, `ADMIN_PSK_HASH`.
-Set `CLIP_TTL_SECONDS` to override the 24h clip lifetime (handy for testing).
+Set `CLIP_TTL_SECONDS` to override the default 1-day clip lifetime (handy for testing).
 
 ## Build
 
