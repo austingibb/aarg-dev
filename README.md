@@ -37,6 +37,34 @@ DELETE FROM short_link_creations;
   `.\admin-login.sh`, then enter the PSK + 6-digit TOTP code. Red `admin` console menu
   items appear only when admin-logged-in.
 
+## Widgets
+
+Site features share `src/widgets/Widget.jsx`, with page and inline presentations.
+`src/widgets/registry.js` defines stable widget type IDs, navigation visibility,
+route aliases, layout defaults, and telemetry groups. `WidgetRoutes.jsx` binds
+routed types to React components. Shell blocks and individual telemetry charts
+are inline widgets; inputs, prompts, and charts remain reusable UI primitives.
+The private scavenger-hunt flow stays outside the registry and is resolved by
+the existing dynamic URL handler. Navigation visibility is not authorization;
+the existing page and API access checks still apply.
+
+A widget type and a configured instance are separate. `createWidgetInstance`
+returns serializable `{ id, widgetId, config }` data with a unique instance ID.
+Render repeated instances with `<Widget key={pin.id} instance={pin}>`, and read
+their configuration inside child components with `useWidgetInstance()`.
+Existing single-instance features can use `<Widget id="blog">` directly.
+
+For the planned Steam player-count widget, register one type and create a
+separate instance configured with an app ID for each pinned game. The future
+account dashboard/API will own pin persistence and ownership; this refactor
+adds the instance foundation, not Steam fetching or saved per-user dashboards.
+
+Check registry visibility, route aliases, and instance isolation with
+`npm run test:widgets`. `tests/widgets-browser.mjs` checks the built UI using
+the same `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` setup as the reward browser test;
+run `npm run build:check` first. It serves only `dist-check`, mocks API calls,
+and blocks external requests.
+
 ## Dev
 
 The standalone SteamDB scraper prototype lives in [`scraper/`](scraper/README.md).

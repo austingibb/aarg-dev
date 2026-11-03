@@ -1,6 +1,7 @@
+import Widget from './widgets/Widget.jsx'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Screen, Window, Prompt, Button, Notice } from './terminal.jsx'
+import { Prompt, Button, Notice } from './terminal.jsx'
 import { getShortLink } from './api.js'
 import ClipView from './ClipView.jsx'
 import Reward from './Reward.jsx'
@@ -35,24 +36,22 @@ export default function PathResolver({ shortOnly = false }) {
   if (status === 'reward') return <Reward key={path} slug={path} />
 
   return (
-    <Screen align="top" max="48rem">
-      <Window title={`aarg.dev / ${shortOnly ? 's / ' : ''}${path}`} tag={status}>
-        <div className="px-6 pt-7 pb-4">
-          <Prompt cmd={`resolve ${shortOnly ? `/s/${path}` : `/${path}`}`} cursor={status === 'loading'} />
-        </div>
-        <hr className="tui-sep" />
-        <div className="px-6 py-10 flex flex-col gap-4">
-          {status === 'loading' && <p style={{ color: 'var(--dim)' }}>resolving…</p>}
-          {status === 'missing' && <Notice kind="error">there is no page for this url.</Notice>}
-          {status === 'error' && <Notice kind="error">the url could not be resolved. try again shortly.</Notice>}
-          {status !== 'loading' && (
-            <div className="flex items-center gap-3">
-              <Button onClick={() => navigate('/short')}>create short url</Button>
-              <Link to="/" style={{ color: 'var(--dim)' }}>../ home</Link>
-            </div>
-          )}
-        </div>
-      </Window>
-    </Screen>
+    <Widget id="resolver" title={`aarg.dev / ${shortOnly ? 's / ' : ''}${path}`} tag={status}>
+      <div className="px-6 pt-7 pb-4">
+        <Prompt cmd={`resolve ${shortOnly ? `/s/${path}` : `/${path}`}`} cursor={status === 'loading'} />
+      </div>
+      <hr className="tui-sep" />
+      <div className="px-6 py-10 flex flex-col gap-4">
+        {status === 'loading' && <p style={{ color: 'var(--dim)' }}>resolving…</p>}
+        {status === 'missing' && <Notice kind="error">there is no page for this url.</Notice>}
+        {status === 'error' && <Notice kind="error">the url could not be resolved. try again shortly.</Notice>}
+        {status !== 'loading' && (
+          <div className="flex items-center gap-3">
+            <Button onClick={() => navigate('/short')}>create short url</Button>
+            <Link to="/" style={{ color: 'var(--dim)' }}>../ home</Link>
+          </div>
+        )}
+      </div>
+    </Widget>
   )
 }

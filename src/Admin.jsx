@@ -1,6 +1,7 @@
+import Widget from './widgets/Widget.jsx'
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { Screen, Window, Prompt, Field, Button, Notice, Confirm } from './terminal.jsx'
+import { Prompt, Field, Button, Notice, Confirm } from './terminal.jsx'
 import { useAuth } from './auth.js'
 import RewardAdmin from './RewardAdmin.jsx'
 import {
@@ -50,33 +51,31 @@ function AdminLogin({ refresh, navigate }) {
   }
 
   return (
-    <Screen align="top" max="42rem">
-      <Window title="aarg.dev / admin" tag="root · locked">
-        <div className="px-6 pt-7 pb-4"><Prompt cmd="su - root" cursor /></div>
-        <hr className="tui-sep" />
-        <form onSubmit={submit} className="px-6 py-6 flex flex-col gap-4">
-          <Field
-            label="admin psk (pre-shared key)" type="password" value={psk}
-            autoFocus autoComplete="off" onChange={setPsk} onEnter={submit}
-            placeholder="••••••••"
-          />
-          <Field
-            label="totp code (6 digits)" value={totp}
-            onChange={(v) => setTotp(v.replace(/\D/g, '').slice(0, 6))}
-            onEnter={submit} placeholder="000000" autoComplete="one-time-code"
-          />
-          <div className="flex items-center gap-3">
-            <Button onClick={submit} disabled={busy || !psk || totp.length !== 6}>
-              {busy ? '…' : 'authenticate'}
-            </Button>
-            <span className="text-xs" style={{ color: 'var(--dim)' }}>psk + totp required</span>
-          </div>
-          <Notice kind="error">{err}</Notice>
-        </form>
-        <hr className="tui-sep" />
-        <BackRow navigate={navigate} />
-      </Window>
-    </Screen>
+    <Widget id="admin" max="42rem" tag="root · locked">
+      <div className="px-6 pt-7 pb-4"><Prompt cmd="su - root" cursor /></div>
+      <hr className="tui-sep" />
+      <form onSubmit={submit} className="px-6 py-6 flex flex-col gap-4">
+        <Field
+          label="admin psk (pre-shared key)" type="password" value={psk}
+          autoFocus autoComplete="off" onChange={setPsk} onEnter={submit}
+          placeholder="••••••••"
+        />
+        <Field
+          label="totp code (6 digits)" value={totp}
+          onChange={(v) => setTotp(v.replace(/\D/g, '').slice(0, 6))}
+          onEnter={submit} placeholder="000000" autoComplete="one-time-code"
+        />
+        <div className="flex items-center gap-3">
+          <Button onClick={submit} disabled={busy || !psk || totp.length !== 6}>
+            {busy ? '…' : 'authenticate'}
+          </Button>
+          <span className="text-xs" style={{ color: 'var(--dim)' }}>psk + totp required</span>
+        </div>
+        <Notice kind="error">{err}</Notice>
+      </form>
+      <hr className="tui-sep" />
+      <BackRow navigate={navigate} />
+    </Widget>
   )
 }
 
@@ -112,52 +111,50 @@ function AdminConsole({ user, refresh, navigate }) {
   const [confirmLogout, setConfirmLogout] = useState(false)
 
   return (
-    <Screen align="top" max="56rem">
-      <Window title="aarg.dev / admin" tag="root">
-        <div className="px-6 pt-7 pb-4">
-          <Prompt cmd="admin-console" cursor />
-          <p className="text-xs mt-2" style={{ color: 'var(--red)' }}>
-            root session · {user.email || 'anonymous'} · 12h
-          </p>
-        </div>
-        <hr className="tui-sep" />
+    <Widget id="admin" tag="root">
+      <div className="px-6 pt-7 pb-4">
+        <Prompt cmd="admin-console" cursor />
+        <p className="text-xs mt-2" style={{ color: 'var(--red)' }}>
+          root session · {user.email || 'anonymous'} · 12h
+        </p>
+      </div>
+      <hr className="tui-sep" />
 
-        <div className="flex flex-wrap">
-          <SectionTab active={section === 'whitelist'} onClick={() => setSection('whitelist')} label="whitelist" />
-          <SectionTab active={section === 'clips'} onClick={() => setSection('clips')} label="clips" />
-          <SectionTab active={section === 'short-links'} onClick={() => setSection('short-links')} label="short urls" />
-          <SectionTab active={section === 'reward'} onClick={() => setSection('reward')} label="reward" />
-        </div>
-        <hr className="tui-sep" />
+      <div className="flex flex-wrap">
+        <SectionTab active={section === 'whitelist'} onClick={() => setSection('whitelist')} label="whitelist" />
+        <SectionTab active={section === 'clips'} onClick={() => setSection('clips')} label="clips" />
+        <SectionTab active={section === 'short-links'} onClick={() => setSection('short-links')} label="short urls" />
+        <SectionTab active={section === 'reward'} onClick={() => setSection('reward')} label="reward" />
+      </div>
+      <hr className="tui-sep" />
 
-        <div className="px-6 py-6">
-          <Notice kind="error">{err}</Notice>
-          {section === 'whitelist' && <WhitelistSection wl={wl} reload={load} />}
-          {section === 'clips' && <ClipsSection clips={clips} reload={load} />}
-          {section === 'short-links' && <ShortLinksSection links={shortLinks} reload={load} />}
-          {section === 'reward' && <RewardAdmin />}
-        </div>
+      <div className="px-6 py-6">
+        <Notice kind="error">{err}</Notice>
+        {section === 'whitelist' && <WhitelistSection wl={wl} reload={load} />}
+        {section === 'clips' && <ClipsSection clips={clips} reload={load} />}
+        {section === 'short-links' && <ShortLinksSection links={shortLinks} reload={load} />}
+        {section === 'reward' && <RewardAdmin />}
+      </div>
 
-        <hr className="tui-sep" />
+      <hr className="tui-sep" />
 
-        <div className="px-6 py-4">
-          {confirmLogout ? (
-            <Confirm
-              message="drop admin session? (user login stays active)"
-              confirmLabel="admin logout"
-              variant="danger"
-              onConfirm={doLogout}
-              onCancel={() => setConfirmLogout(false)}
-            />
-          ) : (
-            <Button variant="danger" onClick={() => setConfirmLogout(true)}>admin logout</Button>
-          )}
-        </div>
+      <div className="px-6 py-4">
+        {confirmLogout ? (
+          <Confirm
+            message="drop admin session? (user login stays active)"
+            confirmLabel="admin logout"
+            variant="danger"
+            onConfirm={doLogout}
+            onCancel={() => setConfirmLogout(false)}
+          />
+        ) : (
+          <Button variant="danger" onClick={() => setConfirmLogout(true)}>admin logout</Button>
+        )}
+      </div>
 
-        <hr className="tui-sep" />
-        <BackRow navigate={navigate} />
-      </Window>
-    </Screen>
+      <hr className="tui-sep" />
+      <BackRow navigate={navigate} />
+    </Widget>
   )
 }
 

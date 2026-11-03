@@ -1,6 +1,7 @@
+import Widget from './widgets/Widget.jsx'
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
-import { Screen, Window, Prompt, Button, Notice } from './terminal.jsx'
+import { Prompt, Button, Notice } from './terminal.jsx'
 import { getClip, clipFileUrl } from './api.js'
 import { fmtSize } from './format.js'
 
@@ -44,99 +45,97 @@ export default function ClipView({ fallbackMissing = false }) {
   const noAccess = status === 'login' || status === 'denied' || status === 'unauthorized'
 
   return (
-    <Screen align="top" max="52rem">
-      <Window title={title} tag={status === 'ok' ? 'live' : status}>
-        <div className="px-6 pt-7 pb-4">
-          <Prompt path="~/clip" cmd={`cat ${path}`} cursor />
+    <Widget id="clip-view" title={title} tag={status === 'ok' ? 'live' : status}>
+      <div className="px-6 pt-7 pb-4">
+        <Prompt path="~/clip" cmd={`cat ${path}`} cursor />
+      </div>
+      <hr className="tui-sep" />
+
+      {status === 'loading' && (
+        <div className="px-6 py-10"><p style={{ color: 'var(--dim)' }}>reading…</p></div>
+      )}
+
+      {noAccess && (
+        <div className="px-6 py-10 flex flex-col gap-4">
+          <Notice kind="error">
+            whoops — you don't have permission to view this part of the website. you may have meant to view the main page: aarg.dev
+          </Notice>
+          <Button onClick={() => navigate('/')}>return to aarg.dev</Button>
         </div>
-        <hr className="tui-sep" />
+      )}
 
-        {status === 'loading' && (
-          <div className="px-6 py-10"><p style={{ color: 'var(--dim)' }}>reading…</p></div>
-        )}
+      {status === 'missing' && (
+        <div className="px-6 py-10 flex flex-col gap-4">
+          <Notice kind="error">{fallbackMissing ? 'there is no page for this url.' : (err || 'no such clip (or it expired)')}</Notice>
+          {!fallbackMissing && (
+            <Button onClick={() => navigate(`/clip?path=${encodeURIComponent(path)}`)}>
+              make clip for this path
+            </Button>
+          )}
+        </div>
+      )}
 
-        {noAccess && (
-          <div className="px-6 py-10 flex flex-col gap-4">
-            <Notice kind="error">
-              whoops — you don't have permission to view this part of the website. you may have meant to view the main page: aarg.dev
-            </Notice>
-            <Button onClick={() => navigate('/')}>return to aarg.dev</Button>
+      {status === 'ok' && clip && (
+        <div className="px-6 py-6 flex flex-col gap-4">
+          <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: 'var(--dim)' }}>
+            <span>path: <span style={{ color: 'var(--fg)' }}>/{clip.path}</span></span>
+            <span>·</span>
+            <span>expires in {expiresIn(clip.expires_at)}</span>
           </div>
-        )}
-
-        {status === 'missing' && (
-          <div className="px-6 py-10 flex flex-col gap-4">
-            <Notice kind="error">{fallbackMissing ? 'there is no page for this url.' : (err || 'no such clip (or it expired)')}</Notice>
-            {!fallbackMissing && (
-              <Button onClick={() => navigate(`/clip?path=${encodeURIComponent(path)}`)}>
-                make clip for this path
-              </Button>
-            )}
-          </div>
-        )}
-
-        {status === 'ok' && clip && (
-          <div className="px-6 py-6 flex flex-col gap-4">
-            <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: 'var(--dim)' }}>
-              <span>path: <span style={{ color: 'var(--fg)' }}>/{clip.path}</span></span>
-              <span>·</span>
-              <span>expires in {expiresIn(clip.expires_at)}</span>
-            </div>
-            {clip.content ? (
-              <pre className="tui-input" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto' }}>
+          {clip.content ? (
+            <pre className="tui-input" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowX: 'auto' }}>
 {clip.content}
-              </pre>
-            ) : (
-              <p className="text-xs" style={{ color: 'var(--dim)' }}>(no text — file-only clip)</p>
-            )}
-            {clip.file && (
-              <div className="flex items-center gap-3 flex-wrap text-xs">
-                <span style={{ color: 'var(--dim)' }}>attachment:</span>
-                <span style={{ color: 'var(--fg)', wordBreak: 'break-all' }}>
-                  {clip.file.name} <span style={{ color: 'var(--dim)' }}>({fmtSize(clip.file.size)})</span>
-                </span>
-                {/* Plain same-origin navigation: cookie rides along, and the
-                    Content-Disposition: attachment response downloads without
-                    leaving the page. */}
-                <Button onClick={() => { window.location.href = clipFileUrl(clip.path) }}>
-                  ↓ download
-                </Button>
-              </div>
-            )}
-            <div className="flex items-center gap-3 flex-wrap">
-              {clip.content && <Button onClick={copy}>{copied ? 'copied!' : 'copy content'}</Button>}
-              {clipUrl(clip.content) && (
-                <Button onClick={() => window.open(clipUrl(clip.content), '_blank', 'noopener,noreferrer')}>
-                  follow clip url ↗
-                </Button>
-              )}
-              <Button
-                variant="danger"
-                onClick={() => navigate(`/clip?replace=${encodeURIComponent(clip.path)}`)}
-              >
-                replace this clip with new clip
+            </pre>
+          ) : (
+            <p className="text-xs" style={{ color: 'var(--dim)' }}>(no text — file-only clip)</p>
+          )}
+          {clip.file && (
+            <div className="flex items-center gap-3 flex-wrap text-xs">
+              <span style={{ color: 'var(--dim)' }}>attachment:</span>
+              <span style={{ color: 'var(--fg)', wordBreak: 'break-all' }}>
+                {clip.file.name} <span style={{ color: 'var(--dim)' }}>({fmtSize(clip.file.size)})</span>
+              </span>
+              {/* Plain same-origin navigation: cookie rides along, and the
+                  Content-Disposition: attachment response downloads without
+                  leaving the page. */}
+              <Button onClick={() => { window.location.href = clipFileUrl(clip.path) }}>
+                ↓ download
               </Button>
             </div>
+          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            {clip.content && <Button onClick={copy}>{copied ? 'copied!' : 'copy content'}</Button>}
+            {clipUrl(clip.content) && (
+              <Button onClick={() => window.open(clipUrl(clip.content), '_blank', 'noopener,noreferrer')}>
+                follow clip url ↗
+              </Button>
+            )}
+            <Button
+              variant="danger"
+              onClick={() => navigate(`/clip?replace=${encodeURIComponent(clip.path)}`)}
+            >
+              replace this clip with new clip
+            </Button>
           </div>
-        )}
-
-        <hr className="tui-sep" />
-        <div className="px-6 py-3 tui-status">
-          {!noAccess && (fromAdmin ? (
-            <Link to="/admin" onClick={(e) => { e.preventDefault(); navigate('/admin', { state: { section: 'clips' } }) }} style={{ color: 'var(--red)' }}>
-              ‹ admin console
-            </Link>
-          ) : (
-            <Link to="/clip" onClick={(e) => { e.preventDefault(); navigate('/clip') }} style={{ color: 'var(--amber)' }}>
-              ‹ new clip
-            </Link>
-          ))}
-          <Link to="/" onClick={(e) => { e.preventDefault(); navigate('/') }} style={{ color: 'var(--dim)', marginLeft: 'auto' }}>
-            {noAccess ? 'aarg.dev' : '../ home'}
-          </Link>
         </div>
-      </Window>
-    </Screen>
+      )}
+
+      <hr className="tui-sep" />
+      <div className="px-6 py-3 tui-status">
+        {!noAccess && (fromAdmin ? (
+          <Link to="/admin" onClick={(e) => { e.preventDefault(); navigate('/admin', { state: { section: 'clips' } }) }} style={{ color: 'var(--red)' }}>
+            ‹ admin console
+          </Link>
+        ) : (
+          <Link to="/clip" onClick={(e) => { e.preventDefault(); navigate('/clip') }} style={{ color: 'var(--amber)' }}>
+            ‹ new clip
+          </Link>
+        ))}
+        <Link to="/" onClick={(e) => { e.preventDefault(); navigate('/') }} style={{ color: 'var(--dim)', marginLeft: 'auto' }}>
+          {noAccess ? 'aarg.dev' : '../ home'}
+        </Link>
+      </div>
+    </Widget>
   )
 }
 
